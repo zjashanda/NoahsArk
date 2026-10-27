@@ -1,0 +1,25 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant Boot as Startup
+  participant Lock as Toolchain Lock
+  participant Probe as Version Probe
+  participant Smoke as Smoke Runner
+  participant Gate as Compatibility Gate
+  participant Admin
+  participant Exec as Real Execution
+  Boot->>Lock: read lock + hashes
+  Lock-->>Boot: expected versions
+  Boot->>Probe: inspect opencode / OMO / plugins / skills
+  Probe-->>Boot: installed versions
+  alt 版本漂移
+    Boot->>Smoke: run T1/T2
+    Smoke-->>Gate: smoke result
+    Gate-->>Exec: real execution disabled
+    Gate-->>Admin: drift + required action
+    Admin-->>Gate: acknowledge / upgrade
+    Gate->>Lock: update reviewable pin
+  else 完全匹配
+    Gate-->>Exec: real execution enabled
+  end
+  Note over Lock,Exec: 真实执行失败关闭；pin 更新必须单独评审

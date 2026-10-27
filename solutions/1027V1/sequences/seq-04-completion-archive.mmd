@@ -1,0 +1,27 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant Gate as Completion Gate
+  participant Evid as Evidence Graph
+  participant Verdict as Verdict Service
+  participant KB as Knowledge Writer
+  participant Arch as Archive
+  participant DB as State Store
+  participant EV as Event Log
+  Gate->>Evid: evaluate C1-C5 + C7
+  Evid-->>Gate: binary evidence refs
+  Gate->>Verdict: recompute independent verdict
+  Verdict-->>Gate: verdict + divergence
+  alt 任一证据门禁失败
+    Gate-->>DB: keep non-terminal / BLOCKED_HUMAN
+    Gate->>EV: completion.blocked
+  else C1-C5 + C7 满足
+    Gate->>KB: write_playbook + failure candidates
+    KB-->>Gate: C6 evidence / no_reusable_knowledge
+    Gate->>Arch: archive artifacts + manifest
+    Arch-->>Gate: archive receipt
+    Gate->>Gate: sign completion report
+    Gate->>DB: write terminal + report hash
+    Gate->>EV: task.completed exactly once
+  end
+  Note over Gate,DB: C6 在归档前补齐；终态没有合格报告则数据库拒绝写入

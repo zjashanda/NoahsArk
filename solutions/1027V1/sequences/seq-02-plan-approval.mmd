@@ -1,0 +1,27 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  actor User
+  participant Lead as Lead Agent
+  participant Planner
+  participant OS as OpenSpec
+  participant Rev as Reviewer
+  participant App as Approver
+  participant CMD as Command Facade
+  participant WF as Workflow
+  Lead->>CMD: create_plan_draft(task_id)
+  CMD->>WF: 校验任务阶段与权限
+  WF-->>CMD: phase=planning
+  Lead->>Planner: 生成方案、用例与 oracle
+  Planner->>OS: validate change / task contract
+  OS-->>Planner: schema + traceability result
+  Planner->>Rev: 请求跨模型家族评审
+  Rev-->>Planner: findings + blockers
+  opt 存在阻断项
+    Planner->>Planner: 修订方案并重新评审
+  end
+  Planner->>App: 提交人工批准
+  App-->>CMD: approve(plan_revision_sha256)
+  CMD->>WF: freeze_plan + approval_id
+  CMD->>OS: 记录批准与评审回执
+  Note over CMD,WF: 批准后方案不可变；C1 证据由此生成

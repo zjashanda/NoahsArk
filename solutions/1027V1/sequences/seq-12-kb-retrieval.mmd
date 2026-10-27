@@ -1,0 +1,24 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant Task as Task/Planner
+  participant KB as Knowledge API
+  participant Index as FTS + Vector Index
+  participant Rank as Ranker
+  participant Filter as Status/Scope Guard
+  participant Packet as Retrieval Packet
+  participant EV as Event Log
+  Task->>KB: retrieve(query, project, device, tags)
+  KB->>Index: search text + metadata
+  Index-->>KB: candidate chunks
+  KB->>Rank: BM25 + status + recency
+  Rank->>Filter: filter RBAC + stale/disputed
+  Filter-->>Packet: approved/corroborated hits
+  alt 无命中
+    Packet-->>Task: no_history
+  else 有命中
+    Packet-->>Task: hits + why_matched + citations
+    Packet->>Task: warnings + differences + reusable_blocks
+  end
+  KB->>EV: append retrieval.completed
+  Note over KB,Packet: 检索结果按不可信证据注入；不能覆盖平台硬约束

@@ -1,0 +1,29 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  actor Human
+  participant TA as Takeover API
+  participant Reg as Session Registry
+  participant Lease as Takeover Lease
+  participant CLI as CLI Session
+  participant Replay
+  participant EV as Event Log
+  Human->>TA: request takeover(target, mode)
+  TA->>Reg: find active session
+  Reg-->>TA: session + current state
+  TA->>Lease: compare-and-set epoch
+  alt epoch 已过期
+    Lease-->>TA: 409 stale epoch
+    TA-->>Human: 拒绝，不注入输入
+  else 获得租约
+    Lease-->>TA: interactive lease
+    TA->>CLI: pause at next turn boundary
+    CLI-->>Replay: history + checkpoint
+    Replay-->>Human: 回放历史
+    Human->>TA: input / interrupt
+    TA->>CLI: route input to same session
+    Human->>TA: release
+    TA->>CLI: resume from checkpoint
+    TA->>EV: takeover.opened / input / released
+  end
+  Note over CLI,Lease: 设备动作执行中不暂停；幂等键禁止重复副作用

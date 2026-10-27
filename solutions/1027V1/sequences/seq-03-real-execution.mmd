@@ -1,0 +1,32 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant Lead as Lead Agent
+  participant CMD as Command Facade
+  participant Exec as Execution Service
+  participant Node as Node Agent
+  participant Lease as Device Lease
+  participant Lst as lstest Runner
+  participant Evid as Evidence Store
+  participant Rec as Receipt Signer
+  participant EV as Event Log
+  Lead->>CMD: request_real_execution(task_id, plan_hash)
+  CMD->>Exec: dispatch(adapter=lstest, run_mode=real)
+  Exec->>Node: acquire node + device lease
+  Node->>Lease: compare-and-set lease
+  Lease-->>Node: lease_id
+  Node->>Lst: preflight(profile, endpoints)
+  Lst-->>Node: preflight result
+  alt 预检失败
+    Node->>Evid: 保存预检证据
+    Node-->>CMD: BLOCKED_HUMAN / repair request
+  else 预检通过
+    Node->>Lst: run(profile, samples)
+    Lst->>Evid: 写入原始日志、音频、结果表
+    Lst-->>Node: runner exit + artifact manifest
+    Node->>Rec: sign(receipt)
+    Rec-->>Exec: signed receipt
+    Exec->>EV: append execution.completed
+    Exec-->>CMD: run summary + evidence refs
+  end
+  Note over Node,Lst: 只有 real + 签名回执可作为 C2 证据；dry-run 只允许预检

@@ -1,0 +1,30 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+flowchart LR
+  subgraph L["Linux 控制面"]
+    UI["NoahsArk Console"]
+    API["Node API / Job API"]
+    DB["SQLite WAL<br/>job + lease + evidence index"]
+    Gate["Completion Gate"]
+  end
+  subgraph W["Windows 执行节点"]
+    Agent["Node Agent<br/>Windows Service"]
+    Work["Workdir<br/>profile + script"]
+    Runner["lstest Runner<br/>Job Object"]
+    Serial["Serial / Audio / Power"]
+  end
+  Device["被测设备"]
+  Store["Evidence Store<br/>hash + manifest"]
+
+  UI -->|命令| API
+  API -->|job/lease| DB
+  Agent -->|HTTPS 443 出站<br/>heartbeat + long-poll| API
+  API -->|signed download| Agent
+  Agent --> Work
+  Agent --> Runner
+  Runner --> Serial
+  Serial --> Device
+  Agent -->|chunked upload| Store
+  Store --> Gate
+  DB --> Gate
+  Gate -->|completion| API
+```

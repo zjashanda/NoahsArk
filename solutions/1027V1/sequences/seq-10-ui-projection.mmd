@@ -1,0 +1,28 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  actor User
+  participant UI as Browser
+  participant API as UI Query API
+  participant Proj as Projection Service
+  participant SSE as SSE Gateway
+  participant EV as Event Log
+  participant CMD as Command Facade
+  User->>UI: 打开任务详情
+  UI->>API: GET /tasks/{id}/projection
+  API->>Proj: read-only projection
+  Proj->>EV: load event cursor
+  Proj-->>API: stage + gates + evidence + binding
+  API-->>UI: JSON projection
+  UI-->>User: 渲染，不拼装业务状态
+  UI->>SSE: subscribe(Last-Event-ID)
+  alt 连接断开
+    SSE-->>UI: degraded
+    UI->>API: bounded polling
+  else 实时事件
+    SSE-->>UI: event patch
+  end
+  User->>UI: 点击批准/停止
+  UI->>API: POST command with CSRF + idempotency
+  API->>CMD: command facade
+  CMD-->>UI: accepted / 403 / 409

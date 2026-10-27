@@ -1,0 +1,23 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant Lead as Lead Agent
+  participant Discuss as discuss Tool
+  participant Panel as Role Panel
+  participant Router as Model Router
+  participant Memory as Meeting Memory
+  participant EV as Event Log
+  Lead->>Discuss: discuss(topic, roles, models, max_rounds)
+  Discuss->>Memory: load prior meeting context
+  Discuss->>Panel: create role agenda
+  par 同轮并行
+    Panel->>Router: call role A
+    Panel->>Router: call role B
+    Panel->>Router: call role C
+  end
+  Router-->>Panel: opinions + citations
+  Panel->>Discuss: consensus / disagreements / risks
+  Discuss->>Memory: persist round summary
+  Discuss->>EV: append roundtable.completed
+  Discuss-->>Lead: structured candidate advice
+  Note over Lead,Discuss: 输出是候选意见，不是验收结论

@@ -1,0 +1,39 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant UI as NoahsArk Console
+  participant API as Linux Node API
+  participant Job as Job/Lease Store
+  participant Agent as Windows Node Agent
+  participant Lst as lstest Runner
+  participant Dev as Device
+  participant Ev as Evidence Store
+  participant Gate as Completion Gate
+  UI->>API: 创建执行任务（plan/profile/device）
+  API->>Job: 入队 job + node/device lease
+  Agent->>API: 心跳 + 能力声明
+  Agent->>API: 长轮询 next job
+  API-->>Agent: job + 签名下载地址
+  Agent->>API: claim(job, idempotency_key)
+  Agent->>API: 下载 profile / script / runner
+  API-->>Agent: 文件 + SHA256
+  Agent->>Agent: 校验哈希、工具链、工作目录
+  Agent->>Dev: 预检串口/声卡/电源端点
+  Agent->>API: 上传预检证据
+  alt 预检失败
+    API-->>Agent: BLOCKED_HUMAN
+    Agent->>API: release lease + 清理
+  else 预检通过
+    API-->>Agent: run_profile 命令
+    Agent->>Lst: 在 Windows Job Object 中启动
+    Lst->>Dev: 执行真实测试
+    Lst-->>Agent: stdout/stderr、音频、结果表
+    Agent->>API: 心跳 + 取消轮询
+    Agent->>Ev: 分块上传证据 + manifest
+    Agent->>API: 签名回执
+    API->>Gate: 回执 + 证据引用
+    Gate-->>API: 完成门禁结果
+    API-->>Agent: ack
+    Agent->>Agent: 释放租约、清理工作目录
+  end
+  Note over Agent,API: 只有 Windows 节点出站 443；Linux 不远程执行设备脚本

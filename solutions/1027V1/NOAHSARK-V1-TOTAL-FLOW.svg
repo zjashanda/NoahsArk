@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1500" width="1800" height="1500">
+<style>
+  text { font-family: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif; }
+  .title { font-size: 30px; font-weight: 700; fill: #111827; }
+  .subtitle { font-size: 14px; fill: #6b7280; }
+  .phase-title { font-size: 18px; font-weight: 700; fill: #111827; }
+  .node-title { font-size: 14px; font-weight: 600; fill: #111827; }
+  .node-subtitle { font-size: 11.5px; fill: #6b7280; }
+  .edge-label { font-size: 11.5px; font-weight: 500; fill: #6b7280; }
+  .note { font-size: 11.5px; fill: #475569; }
+  .badge { font-size: 10px; font-weight: 700; fill: white; }
+  .legend { font-size: 12px; fill: #6b7280; }
+</style>
+<defs>
+  <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/></marker>
+  <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/></marker>
+  <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/></marker>
+  <marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/></marker>
+  <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#dc2626"/></marker>
+</defs>
+<rect width="1800" height="1500" fill="#ffffff"/>
+<text x="900.0" y="46" text-anchor="middle" class="title">NoahsArk V1 总流程：从需求到可复现交付</text>
+<text x="900.0" y="74" text-anchor="middle" class="subtitle">Linux 控制面 → Windows 节点本地执行 → 证据/回执 → C1–C7 门禁 → 归档与知识回流</text>
+<text x="1740" y="95" text-anchor="end" class="legend">时间方向 →　● 数字 = 逻辑顺序</text>
+
+<rect x="40" y="105" width="1720" height="335" rx="18" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/><text x="64" y="136" class="phase-title">阶段 A：受理、检索、方案与批准</text><text x="1730" y="136" text-anchor="end" class="note">Linux 控制面 · M1/M5/M6/M10</text>
+<rect x="40" y="470" width="1720" height="405" rx="18" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/><text x="64" y="501" class="phase-title">阶段 B：执行契约、Windows 本地执行与证据</text><text x="1730" y="501" text-anchor="end" class="note">Linux 签发契约 · Windows 执行 · 设备只连 Windows</text>
+<rect x="40" y="905" width="1720" height="325" rx="18" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/><text x="64" y="936" class="phase-title">阶段 C：独立验证、C1–C7、归档与事件</text><text x="1730" y="936" text-anchor="end" class="note">Linux 控制面 · M7/M5/M4</text>
+<rect x="40" y="1260" width="1720" height="170" rx="18" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5"/><text x="64" y="1291" class="phase-title">阶段 D：异常、接管与终态边界</text><text x="1730" y="1291" text-anchor="end" class="note">不是正常主路径；任何异常都不得伪造 PASS</text>
+<rect x="70" y="190" width="150" height="74" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+<text x="145.0" y="218" text-anchor="middle" class="node-title">用户提交</text>
+<text x="145.0" y="239" text-anchor="middle" class="node-subtitle">需求 / 项目 / 设备</text>
+<circle cx="88" cy="206" r="10" fill="#2563eb"/>
+<text x="88" y="210" text-anchor="middle" class="badge">T0</text>
+<rect x="250" y="190" width="155" height="74" rx="10" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="327.5" y="218" text-anchor="middle" class="node-title">01 任务受理</text>
+<text x="327.5" y="239" text-anchor="middle" class="node-subtitle">M1 · 幂等 task_id</text>
+<rect x="440" y="190" width="160" height="74" rx="10" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="520.0" y="218" text-anchor="middle" class="node-title">02 项目知识检索</text>
+<text x="520.0" y="239" text-anchor="middle" class="node-subtitle">M5 · 方法 / 历史 playbook</text>
+<rect x="630" y="190" width="160" height="74" rx="10" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="710.0" y="218" text-anchor="middle" class="node-title">03 工具知识检索</text>
+<text x="710.0" y="239" text-anchor="middle" class="node-subtitle">M5 · lstest / profile / 入口</text>
+<rect x="830" y="190" width="180" height="74" rx="10" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="920.0" y="218" text-anchor="middle" class="node-title">04 方案 / 用例 / oracle</text>
+<text x="920.0" y="239" text-anchor="middle" class="node-subtitle">M6 · 追溯 / 可证伪</text>
+<rect x="1045" y="190" width="180" height="74" rx="10" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="1135.0" y="218" text-anchor="middle" class="node-title">05 保证 + 对抗评审</text>
+<text x="1135.0" y="239" text-anchor="middle" class="node-subtitle">M6 · 跨模型家族 · 阻断项</text>
+<polygon points="1320,181.0 1395.0,227 1320,273.0 1245.0,227" fill="#fff7ed" stroke="#ea580c" stroke-width="1.7"/>
+<text x="1320" y="225" text-anchor="middle" class="node-title">批准？</text>
+<text x="1320" y="246" text-anchor="middle" class="node-subtitle">人工审批</text>
+<rect x="1445" y="190" width="180" height="74" rx="10" fill="#fff" stroke="#2563eb" stroke-width="1.5"/>
+<text x="1535.0" y="218" text-anchor="middle" class="node-title">C1 方案冻结</text>
+<text x="1535.0" y="239" text-anchor="middle" class="node-subtitle">不可变 revision + hash</text>
+<path d="M 220 227 L 250 227" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/><text x="235.0" y="220.0" text-anchor="middle" class="edge-label">提交</text>
+<path d="M 405 227 L 440 227" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/><text x="422.5" y="220.0" text-anchor="middle" class="edge-label">需求</text>
+<path d="M 600 227 L 630 227" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/><text x="615.0" y="220.0" text-anchor="middle" class="edge-label">项目事实</text>
+<path d="M 790 227 L 830 227" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/><text x="810.0" y="220.0" text-anchor="middle" class="edge-label">工具契约</text>
+<path d="M 1010 227 L 1045 227" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/><text x="1027.5" y="220.0" text-anchor="middle" class="edge-label">候选方案</text>
+<path d="M 1225 227 L 1245 227" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/><text x="1235.0" y="220.0" text-anchor="middle" class="edge-label">提交</text>
+<path d="M 1395 227 L 1445 227" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/><text x="1420.0" y="220.0" text-anchor="middle" class="edge-label">批准</text>
+<path d="M 1320 273 V 407 H 920 V 264" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)"/><text x="1110" y="397" text-anchor="middle" class="edge-label">不通过：回炉修订</text>
+<path d="M 1535 264 V 450 H 155 V 535" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/><text x="850" y="442" text-anchor="middle" class="edge-label">C1 冻结后签发执行契约</text>
+<rect x="70" y="550" width="170" height="74" rx="10" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+<text x="155.0" y="578" text-anchor="middle" class="node-title">06 执行契约</text>
+<text x="155.0" y="599" text-anchor="middle" class="node-subtitle">execution_contract.v1</text>
+<rect x="300" y="550" width="180" height="74" rx="10" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+<text x="390.0" y="578" text-anchor="middle" class="node-title">Windows Node Agent</text>
+<text x="390.0" y="599" text-anchor="middle" class="node-subtitle">M2 · 心跳 / 取任务 / 进程树</text>
+<rect x="520" y="550" width="180" height="74" rx="10" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+<text x="610.0" y="578" text-anchor="middle" class="node-title">06 预检</text>
+<text x="610.0" y="599" text-anchor="middle" class="node-subtitle">串口 / 声卡 / 电源 / profile</text>
+<rect x="740" y="550" width="180" height="74" rx="10" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+<text x="830.0" y="578" text-anchor="middle" class="node-title">07 正式执行</text>
+<text x="830.0" y="599" text-anchor="middle" class="node-subtitle">run_mode=real · purpose=formal</text>
+<rect x="960" y="550" width="180" height="74" rx="10" fill="#fff" stroke="#ea580c" stroke-width="1.5"/>
+<text x="1050.0" y="578" text-anchor="middle" class="node-title">08 自修复 / 收敛</text>
+<text x="1050.0" y="599" text-anchor="middle" class="node-subtitle">1–12 类失败先修复再重跑</text>
+<rect x="1180" y="550" width="180" height="74" rx="10" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+<text x="1270.0" y="578" text-anchor="middle" class="node-title">证据 + 签名回执</text>
+<text x="1270.0" y="599" text-anchor="middle" class="node-subtitle">M2 · manifest / hash / Ed25519</text>
+<rect x="1400" y="550" width="180" height="74" rx="10" fill="#fff" stroke="#9333ea" stroke-width="1.5"/>
+<text x="1490.0" y="578" text-anchor="middle" class="node-title">09 独立验证</text>
+<text x="1490.0" y="599" text-anchor="middle" class="node-subtitle">M7 · 原始证据重算</text>
+<path d="M 240 587 L 300 587" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/><text x="270.0" y="580.0" text-anchor="middle" class="edge-label">下发</text>
+<path d="M 480 587 L 520 587" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/><text x="500.0" y="580.0" text-anchor="middle" class="edge-label">领取</text>
+<path d="M 700 587 L 740 587" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/><text x="720.0" y="580.0" text-anchor="middle" class="edge-label">预检通过</text>
+<path d="M 920 587 L 960 587" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)"/><text x="940.0" y="580.0" text-anchor="middle" class="edge-label">运行</text>
+<path d="M 1140 587 L 1180 587" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/><text x="1160.0" y="580.0" text-anchor="middle" class="edge-label">采集</text>
+<path d="M 1360 587 L 1400 587" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/><text x="1380.0" y="580.0" text-anchor="middle" class="edge-label">回执/证据</text>
+<path d="M 1050 624 V 680 H 830 V 628" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow-orange)"/><text x="950" y="674" text-anchor="middle" class="edge-label">失败修复后重跑</text>
+<rect x="500" y="715" width="190" height="74" rx="10" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+<text x="595.0" y="743" text-anchor="middle" class="node-title">BLOCKED_HUMAN</text>
+<text x="595.0" y="764" text-anchor="middle" class="node-subtitle">人工确认 / 修订 / 重批</text>
+<rect x="740" y="715" width="180" height="74" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="830.0" y="743" text-anchor="middle" class="node-title">dry-run 拒绝</text>
+<text x="830.0" y="764" text-anchor="middle" class="node-subtitle">不得作为完成证据</text>
+<rect x="960" y="715" width="220" height="74" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="1070.0" y="743" text-anchor="middle" class="node-title">STOPPED / CANCELLED</text>
+<text x="1070.0" y="764" text-anchor="middle" class="node-subtitle">保留证据，不输出产品结论</text>
+<path d="M 610 624 L 595 715" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)"/><text x="602.5" y="662.5" text-anchor="middle" class="edge-label">预检失败</text>
+<path d="M 830 624 L 830 715" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#arrow-red)"/><text x="830.0" y="662.5" text-anchor="middle" class="edge-label">非 real</text>
+<path d="M 880 624 V 690 H 1060 V 715" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#arrow-red)"/><text x="1010" y="684" text-anchor="middle" class="edge-label">外部停止/故障</text>
+<path d="M 595 715 V 680 H 490 V 430 H 920 V 264" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow-orange)"/><text x="700" y="423" text-anchor="middle" class="edge-label">人工确认后回方案</text>
+<path d="M 1490 624 V 875 H 160 V 955" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/><text x="820" y="867" text-anchor="middle" class="edge-label">证据图 + 复现清单</text>
+<rect x="70" y="960" width="180" height="74" rx="10" fill="#fff" stroke="#ea580c" stroke-width="1.5"/>
+<text x="160.0" y="988" text-anchor="middle" class="node-title">10 C1–C7</text>
+<text x="160.0" y="1009" text-anchor="middle" class="node-subtitle">完成门禁 + 独立重算</text>
+<rect x="310" y="960" width="180" height="74" rx="10" fill="#fff" stroke="#9333ea" stroke-width="1.5"/>
+<text x="400.0" y="988" text-anchor="middle" class="node-title">11 C6 知识回写</text>
+<text x="400.0" y="1009" text-anchor="middle" class="node-subtitle">playbook / failure / reason</text>
+<rect x="550" y="960" width="180" height="74" rx="10" fill="#fff" stroke="#9333ea" stroke-width="1.5"/>
+<text x="640.0" y="988" text-anchor="middle" class="node-title">11 归档</text>
+<text x="640.0" y="1009" text-anchor="middle" class="node-subtitle">manifest / 证据索引</text>
+<rect x="790" y="960" width="180" height="74" rx="10" fill="#fff" stroke="#9333ea" stroke-width="1.5"/>
+<text x="880.0" y="988" text-anchor="middle" class="node-title">12 签核 / 交付</text>
+<text x="880.0" y="1009" text-anchor="middle" class="node-subtitle">报告 hash + 人工签核</text>
+<rect x="1030" y="960" width="220" height="74" rx="10" fill="#fff" stroke="#16a34a" stroke-width="1.5"/>
+<text x="1140.0" y="988" text-anchor="middle" class="node-title">task.completed</text>
+<text x="1140.0" y="1009" text-anchor="middle" class="node-subtitle">M4 · 仅一次 · 事件</text>
+<path d="M 250 997 L 310 997" fill="none" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)"/><text x="280.0" y="990.0" text-anchor="middle" class="edge-label">证据满足</text>
+<path d="M 490 997 L 550 997" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/><text x="520.0" y="990.0" text-anchor="middle" class="edge-label">C6 完成</text>
+<path d="M 730 997 L 790 997" fill="none" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/><text x="760.0" y="990.0" text-anchor="middle" class="edge-label">归档</text>
+<path d="M 970 997 L 1030 997" fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/><text x="1000.0" y="990.0" text-anchor="middle" class="edge-label">签核</text>
+<path d="M 550 997 H 490" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow-orange)"/><text x="520" y="985" text-anchor="middle" class="edge-label">C6 未写</text>
+<path d="M 160 1034 V 1300" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow-orange)"/><text x="250" y="1242" text-anchor="middle" class="edge-label">不满足 → 修复/人工</text>
+<rect x="70" y="1300" width="240" height="80" rx="10" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5"/>
+<text x="190.0" y="1328" text-anchor="middle" class="node-title">M2 修复 / 重跑</text>
+<text x="190.0" y="1349" text-anchor="middle" class="node-subtitle">1–12 类失败先修复</text>
+<rect x="340" y="1300" width="230" height="80" rx="10" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+<text x="455.0" y="1328" text-anchor="middle" class="node-title">M8 接管 / 会话</text>
+<text x="455.0" y="1349" text-anchor="middle" class="node-subtitle">epoch CAS · 回放 · 输入</text>
+<rect x="600" y="1300" width="230" height="80" rx="10" fill="#faf5ff" stroke="#9333ea" stroke-width="1.5"/>
+<text x="715.0" y="1328" text-anchor="middle" class="node-title">M13 会话桥（建议）</text>
+<text x="715.0" y="1349" text-anchor="middle" class="node-subtitle">dispatch / attempt / orphan</text>
+<rect x="860" y="1300" width="220" height="80" rx="10" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+<text x="970.0" y="1328" text-anchor="middle" class="node-title">FAIL 终态</text>
+<text x="970.0" y="1349" text-anchor="middle" class="node-subtitle">仅 13/14 类</text>
+<rect x="1110" y="1300" width="240" height="80" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+<text x="1230.0" y="1328" text-anchor="middle" class="node-title">事件 / UI / 推送</text>
+<text x="1230.0" y="1349" text-anchor="middle" class="node-subtitle">M4 + M11 · 只读投影</text>
+<path d="M 220 1300 V 1240 H 280 V 875 H 830" fill="none" stroke="#ea580c" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow-orange)"/><text x="500" y="867" text-anchor="middle" class="edge-label">修复方案/脚本</text>
+<path d="M 1110 1300 V 1034 H 1030" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrow-green)"/><text x="1080" y="1044" text-anchor="middle" class="edge-label">事件消费</text>
+<text x="64" y="1450" class="legend">图例：蓝=控制/查询；绿=执行/完成；橙=门禁/修复/人工；紫=知识/验证/会话；红=阻断/停止/失败；虚线=回环或异步回流。</text>
+<text x="64" y="1472" class="legend">边界：Windows 节点只负责本地设备与 runner；Linux 只做编排、租约、证据验收和归档。M13 会话桥为 1027V1 评审建议，尚未并入 81 项计划。</text>
+</svg>

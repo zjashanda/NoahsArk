@@ -1,0 +1,28 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant CMD as Command Facade
+  participant EV as Event Log
+  participant Out as Outbox
+  participant Disp as Dispatcher
+  participant SSE as SSE Client
+  participant File as File Channel
+  participant Hook as Webhook
+  participant Sub as Subscriber
+  CMD->>EV: append(event, idempotency_key)
+  EV-->>CMD: seq + event_id
+  EV->>Out: enqueue(deliveries)
+  Out->>Disp: claim due delivery
+  par 并行投递
+    Disp->>SSE: send(event)
+    Disp->>File: append JSONL
+    Disp->>Hook: POST + HMAC signature
+  end
+  alt 投递失败
+    Disp->>Out: retry schedule / dead letter
+    Out->>EV: append push.dead_letter
+  else 投递成功
+    Disp->>Out: mark delivered
+  end
+  SSE-->>Sub: event + Last-Event-ID
+  Note over CMD,Out: 推送失败不改变任务状态；task.completed 只发一次

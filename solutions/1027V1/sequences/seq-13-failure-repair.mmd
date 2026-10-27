@@ -1,0 +1,25 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant Run as Runner/Verifier
+  participant Miner as Failure Miner
+  participant Tree as 14-Step Root Cause
+  participant KB as Knowledge Candidate
+  participant Repair as Repair Writer
+  participant Rev as Reviewer
+  participant Gate as Completion Gate
+  participant Human
+  Run->>Miner: failed run + evidence graph
+  Miner->>Tree: classify failure
+  alt 1-12 类：测试逻辑/环境/设备/断言
+    Tree-->>Repair: repair hypothesis
+    Repair->>Rev: diff + evidence + risk
+    Rev-->>Run: approved repair
+    Run->>Run: re-run after fix
+  else 13/14 类：需求矛盾或固件真实不满足
+    Tree->>Gate: eligible final FAIL
+    Gate->>Human: report + evidence
+  end
+  Miner->>KB: write candidate failure case
+  KB-->>Gate: candidate ids
+  Note over Tree,Gate: 只有 13/14 类可保留最终 FAIL；其余必须先修复并重跑

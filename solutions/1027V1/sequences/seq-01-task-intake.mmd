@@ -1,0 +1,27 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  actor User
+  participant UI as NoahsArk Console
+  participant API as Task API
+  participant CMD as Command Facade
+  participant WF as Workflow
+  participant KB as Knowledge Retrieval
+  participant EV as Event Log
+  User->>UI: 提交需求、项目、设备与风险级别
+  UI->>API: POST /api/noahsark/v2/tasks
+  API->>CMD: create_task(intent, idempotency_key)
+  CMD->>WF: 校验并创建任务
+  WF-->>CMD: task_id / phase=intake
+  CMD->>KB: retrieve(project, device_class, text)
+  KB-->>CMD: retrieval_packet + citations
+  alt 命中相似任务
+    KB-->>CMD: reuse_blocks + differences + warnings
+  else 无历史
+    KB-->>CMD: no_history
+  end
+  CMD->>WF: 绑定检索快照
+  CMD->>EV: append task.created / task.retrieved
+  EV-->>UI: SSE task.created
+  UI-->>User: 返回任务详情与证据来源
+  Note over CMD,KB: 检索结果是不可信证据；没有命中必须显式 no_history

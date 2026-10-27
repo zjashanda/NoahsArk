@@ -1,0 +1,30 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  actor User
+  participant UI as Model/Agent UI
+  participant MA as Model API
+  participant Pol as Policy Resolver
+  participant Cat as Model Catalog
+  participant Health
+  participant Bind as Binding Store
+  participant Audit
+  participant Agent as Active Agent
+  User->>UI: 选择 task / agent / global 作用域
+  UI->>MA: switch_model(scope, model_id, reason)
+  MA->>Pol: resolve(scope, role, requirements)
+  Pol->>Cat: validate model + capability
+  Cat-->>Pol: catalog snapshot
+  Pol->>Health: check provider health
+  alt 瞬时失败
+    Health-->>Pol: unhealthy
+    Pol->>Cat: next eligible candidate
+  else 永久失败
+    Health-->>MA: auth/budget/model_blocked
+    MA-->>UI: 422/409 + MODEL_BLOCKED
+  end
+  Pol->>Bind: create immutable binding
+  Bind->>Audit: switch audit
+  MA-->>Agent: apply at next turn boundary
+  Agent-->>UI: effective binding + source
+  Note over Pol,Agent: 不重启进程；设备动作中不打断

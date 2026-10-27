@@ -1,0 +1,27 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"Segoe UI, Microsoft YaHei UI","primaryColor":"#F5F5F7","primaryTextColor":"#1D1D1F","primaryBorderColor":"#C7C7CC","lineColor":"#6E6E73","secondaryColor":"#EAF2FD","tertiaryColor":"#FFF3E0"}}}%%
+sequenceDiagram
+  autonumber
+  participant Reg as Agent Registry
+  participant Render as Config Renderer
+  participant Drift as Drift Check
+  participant Guard as Write Guard
+  participant OS as OpenSpec
+  participant Rev as Reviewer
+  participant Agent
+  Reg->>Render: render context, commands, tools, scope
+  Render-->>Drift: generated agent config
+  Drift->>Reg: compare hashes
+  alt 配置漂移
+    Drift-->>Agent: fail closed
+  else 配置一致
+    Agent->>Guard: write candidate artifact
+    Guard->>Guard: path + scope + review receipt
+    alt 无评审回执
+      Guard-->>Agent: reject + audit
+    else 有回执
+      Guard->>OS: apply / validate
+      OS-->>Rev: change boundary
+      Rev-->>Agent: approved finding
+    end
+  end
+  Note over Reg,Guard: 注册表是唯一配置源；受保护路径写入必须可追溯
