@@ -1,0 +1,321 @@
+{
+  "$schema": "https://design-tokens.org/schema.json",
+  "meta": {
+    "name": "NoahsArk Console",
+    "version": "2.0.0",
+    "date": "2026-10-26",
+    "status": "design-approved-pending-review",
+    "concept": "Voyage Ledger / 航次档案",
+    "description": "NoahsArk 控制台的原创设计令牌。浅色航海档案纸为画布，深墨绿为文字，海青为可操作路径，朱砂为人类决断，海玻璃绿为已核验证据。所有视觉决策由本文件定义，不继承任何旧平台样式。",
+    "source": "docs/v2/UI-DESIGN.md §0 Research Log + §4 Design Tokens",
+    "mode": "light-first",
+    "cssPrefix": "--na"
+  },
+  "color": {
+    "paper": {
+      "canvasDeep": { "value": "#E4DDCE", "description": "最深的纸层，仅用于全屏接管底与遮罩后的底层" },
+      "canvas": { "value": "#F4F0E6", "description": "页面画布，暖白档案纸" },
+      "panel": { "value": "#F8F5EC", "description": "顶栏、命令行、侧向索引" },
+      "card": { "value": "#FCFAF4", "description": "卡片与表格表面" },
+      "cardHover": { "value": "#FFFDF8", "description": "卡片 hover 与内嵌纸面" },
+      "sunken": { "value": "#EAE4D6", "description": "表头、输入框、轨道底" },
+      "raised": { "value": "#FFFDF8", "description": "弹层、抽屉、浮起纸片" },
+      "stripe": { "value": "rgba(27,42,46,0.035)", "description": "档案纸细横纹，仅用于页面背景，不进入卡片" },
+      "track": { "value": "#D6D0C2", "description": "门禁点、进度轨道、开关轨道的纸面凹槽色" }
+    },
+    "border": {
+      "hairline": { "value": "rgba(27,42,46,0.12)", "description": "分隔线，最低对比结构线" },
+      "default": { "value": "rgba(27,42,46,0.20)", "description": "卡片、输入、表格默认边界" },
+      "strong": { "value": "rgba(27,42,46,0.38)", "description": "hover、选中、弹层边界" },
+      "brand": { "value": "rgba(31,95,91,0.48)", "description": "仅用于 focus-visible、选中行与导航当前项" },
+      "focus": { "value": "#1F5F5B", "description": "键盘焦点外环" }
+    },
+    "text": {
+      "primary": { "value": "#1B2A2E", "description": "标题与正文主色，深墨绿而非纯黑" },
+      "secondary": { "value": "#43585B", "description": "正文、表格内容" },
+      "tertiary": { "value": "#5E7072", "description": "元数据，AA 下限" },
+      "disabled": { "value": "#98A5A3", "description": "仅禁用态，不承载必要信息" },
+      "inverse": { "value": "#FCFAF4", "description": "深底按钮上的文字" },
+      "link": { "value": "#1F5F5B", "description": "链接与可点击文本" }
+    },
+    "brand": {
+      "50": { "value": "#EAF2EE" },
+      "100": { "value": "#D8E8E1" },
+      "200": { "value": "#B9D6CC" },
+      "300": { "value": "#89B7AA" },
+      "400": { "value": "#4F8B80" },
+      "500": { "value": "#1F5F5B", "description": "主品牌海青，用于图形、链接、主按钮" },
+      "600": { "value": "#174C49", "description": "hover" },
+      "700": { "value": "#103A38", "description": "按下态" },
+      "800": { "value": "#0B2B2A" },
+      "900": { "value": "#071D1C" },
+      "soft": { "value": "rgba(31,95,91,0.10)", "description": "选中行、标签底色" },
+      "wash": { "value": "rgba(31,95,91,0.045)", "description": "大面积极轻品牌染色" }
+    },
+    "signal": {
+      "300": { "value": "#E3A18B" },
+      "400": { "value": "#D07050" },
+      "500": { "value": "#B8482C", "description": "人类决断、等待、接管；唯一朱砂色" },
+      "600": { "value": "#9A3822", "description": "hover" },
+      "700": { "value": "#7C2A18", "description": "按下态" },
+      "ink": { "value": "#8E3320", "description": "浅底上的朱砂文本，对比 >= 4.5" },
+      "soft": { "value": "rgba(184,72,44,0.10)" },
+      "wash": { "value": "rgba(184,72,44,0.045)" }
+    },
+    "evidence": {
+      "500": { "value": "#2C7A6B", "description": "证据哈希、已核验、可追溯" },
+      "600": { "value": "#216256" },
+      "ink": { "value": "#1F6257", "description": "浅底证据文本" },
+      "soft": { "value": "rgba(44,122,107,0.10)" }
+    },
+    "status": {
+      "ok": { "value": "#2E6B45", "description": "PASS、在线、已归档" },
+      "okInk": { "value": "#275C3B" },
+      "okSoft": { "value": "rgba(46,107,69,0.10)" },
+      "warn": { "value": "#8F5A18", "description": "WARN、待处理、阻断" },
+      "warnInk": { "value": "#7A4B12" },
+      "warnSoft": { "value": "rgba(143,90,24,0.10)" },
+      "danger": { "value": "#A33A34", "description": "FAIL、错误、危险操作" },
+      "dangerInk": { "value": "#8C2F2A" },
+      "dangerSoft": { "value": "rgba(163,58,52,0.10)" },
+      "info": { "value": "#2A6480", "description": "信息与运行提示" },
+      "infoInk": { "value": "#245772" },
+      "infoSoft": { "value": "rgba(42,100,128,0.10)" },
+      "neutral": { "value": "#5E7072" },
+      "neutralSoft": { "value": "rgba(104,123,125,0.10)" },
+      "stale": { "value": "#647372", "description": "陈旧：中性色 + 虚线/斜纹，不用彩色" },
+      "disputed": { "value": "#A2551A", "description": "知识争议：赭石，区别于 FAIL 红" },
+      "blocked": { "value": "#B8482C", "description": "BLOCKED_HUMAN：与人类决断同色" },
+      "running": { "value": "#1F5F5B" }
+    },
+    "gate": {
+      "pass": { "value": "#2E6B45" },
+      "fail": { "value": "#A33A34" },
+      "pending": { "value": "#B7B3A6" },
+      "blocked": { "value": "#B8482C" },
+      "notApplicable": { "value": "#D6D0C2" }
+    },
+    "dataViz": {
+      "series1": { "value": "#1F5F5B" },
+      "series2": { "value": "#2C7A6B" },
+      "series3": { "value": "#B8482C" },
+      "series4": { "value": "#2A6480" },
+      "series5": { "value": "#8A7A52" },
+      "grid": { "value": "rgba(27,42,46,0.10)" },
+      "axis": { "value": "rgba(27,42,46,0.32)" }
+    },
+    "overlay": {
+      "scrim": { "value": "rgba(11,43,42,0.42)" },
+      "scrimStrong": { "value": "rgba(11,43,42,0.62)" },
+      "paper": { "value": "rgba(252,250,244,0.94)" },
+      "terminal": { "value": "#12211F" },
+      "terminalRaised": { "value": "#182A28" },
+      "terminalText": { "value": "#E7E3D6" },
+      "terminalDim": { "value": "#8FA39D" },
+      "terminalLine": { "value": "rgba(231,227,214,0.14)" }
+    }
+  },
+  "typography": {
+    "family": {
+      "sans": {
+        "value": "\"Aptos\", \"Segoe UI Variable Text\", \"Segoe UI\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", \"PingFang SC\", system-ui, sans-serif",
+        "description": "中文正文优先，Windows 内网离线可用"
+      },
+      "display": {
+        "value": "\"Sitka Banner\", \"Palatino Linotype\", \"Songti SC\", \"Source Han Serif SC\", \"SimSun\", serif",
+        "description": "档案体：品牌字、页面标题、关键数字；每屏最多 4 处，不用于正文与控件"
+      },
+      "mono": {
+        "value": "\"Cascadia Mono\", \"Cascadia Code\", Consolas, \"Courier New\", monospace",
+        "description": "任务 ID、哈希、版本、终端；事实必须可复制、可对齐"
+      },
+      "sansFallbackUI": {
+        "value": "\"Microsoft YaHei UI\", \"Microsoft YaHei\", \"PingFang SC\", sans-serif",
+        "description": "中文控件回退栈，仅当 Aptos/Segoe UI 缺字时使用"
+      }
+    },
+    "scale": {
+      "micro": { "size": "10px", "lineHeight": "14px", "letterSpacing": "0.14em", "usage": "全大写英文眉标，禁止中文正文" },
+      "xs": { "size": "11px", "lineHeight": "16px", "letterSpacing": "0.01em", "usage": "表格辅助、时间戳" },
+      "sm": { "size": "12px", "lineHeight": "18px", "letterSpacing": "0.005em", "usage": "标签、次要信息、表格" },
+      "base": { "size": "13px", "lineHeight": "20px", "letterSpacing": "0", "usage": "UI 默认正文" },
+      "md": { "size": "14px", "lineHeight": "22px", "letterSpacing": "0", "usage": "阅读型正文、表格" },
+      "lg": { "size": "16px", "lineHeight": "26px", "letterSpacing": "-0.005em", "usage": "卡片标题、导语" },
+      "xl": { "size": "20px", "lineHeight": "30px", "letterSpacing": "-0.01em", "usage": "区块标题" },
+      "2xl": { "size": "26px", "lineHeight": "34px", "letterSpacing": "-0.015em", "usage": "页面标题（展示体）" },
+      "3xl": { "size": "34px", "lineHeight": "42px", "letterSpacing": "-0.02em", "usage": "关键结论、总览标题（展示体）" },
+      "4xl": { "size": "44px", "lineHeight": "52px", "letterSpacing": "-0.025em", "usage": "总览大数字，单页最多一处" }
+    },
+    "weight": {
+      "regular": { "value": 400 },
+      "medium": { "value": 500 },
+      "semibold": { "value": 600 },
+      "bold": { "value": 700, "usage": "仅展示体大标题或关键数字，正文不用" }
+    },
+    "numeric": {
+      "tabular": { "value": "tabular-nums", "usage": "所有表格数字、时长、哈希" },
+      "feature": { "value": "\"zero\" 1, \"tnum\" 1" }
+    }
+  },
+  "spacing": {
+    "unit": "4px",
+    "0": "0",
+    "1": "4px",
+    "2": "8px",
+    "3": "12px",
+    "4": "16px",
+    "5": "20px",
+    "6": "24px",
+    "7": "32px",
+    "8": "40px",
+    "9": "48px",
+    "10": "64px",
+    "11": "80px",
+    "section": "44px",
+    "pageGutterDesktop": "36px",
+    "pageGutterTablet": "24px",
+    "pageGutterPhone": "16px",
+    "cardPadding": "20px",
+    "cardPaddingCompact": "16px",
+    "tableCellX": "14px",
+    "tableCellY": "11px"
+  },
+  "radius": {
+    "0": "0",
+    "xs": "2px",
+    "sm": "3px",
+    "md": "4px",
+    "lg": "6px",
+    "xl": "10px",
+    "2xl": "14px",
+    "pill": "999px",
+    "circle": "50%"
+  },
+  "shadow": {
+    "none": "none",
+    "hairline": "0 0 0 1px rgba(27,42,46,0.06)",
+    "card": "0 1px 0 rgba(27,42,46,0.03), 2px 2px 0 rgba(27,42,46,0.055)",
+    "raised": "0 2px 0 rgba(27,42,46,0.04), 4px 6px 0 rgba(27,42,46,0.07)",
+    "popover": "0 0 0 1px rgba(27,42,46,0.14), 0 18px 40px rgba(27,42,46,0.16)",
+    "modal": "0 0 0 1px rgba(27,42,46,0.16), 0 30px 80px rgba(27,42,46,0.22)",
+    "focus": "0 0 0 2px #F4F0E6, 0 0 0 4px #1F5F5B",
+    "press": "0 1px 0 rgba(27,42,46,0.10) inset",
+    "insetTerminal": "0 1px 0 rgba(231,227,214,0.06) inset, 0 0 44px rgba(0,0,0,0.35) inset"
+  },
+  "motion": {
+    "duration": {
+      "instant": "70ms",
+      "fast": "120ms",
+      "base": "180ms",
+      "slow": "260ms",
+      "slower": "380ms"
+    },
+    "easing": {
+      "standard": "cubic-bezier(0.22, 0.61, 0.36, 1)",
+      "enter": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "exit": "cubic-bezier(0.4, 0, 1, 1)",
+      "stamp": "cubic-bezier(0.34, 1.4, 0.64, 1)"
+    },
+    "patterns": {
+      "hover": "background-color, border-color 120ms standard",
+      "enterSheet": "opacity 180ms enter, translateY(3px -> 0) 180ms enter",
+      "tabRule": "transform 180ms standard（下划线从 0 到目标宽度）",
+      "drawer": "translateX(14px -> 0) + opacity 260ms enter",
+      "toast": "translateY(6px -> 0) + opacity 180ms enter",
+      "stampPress": "scale(0.985) 70ms standard，松开回弹 180ms stamp",
+      "runningSheen": "仅运行中：2.2s linear infinite 的背景位移；减少动态时静止",
+      "liveDot": "2.8s ease-in-out infinite opacity 1 -> 0.55；不作为唯一状态信号"
+    },
+    "reducedMotion": {
+      "duration": "0.01ms",
+      "behavior": "保留状态变化与进度数值，去除位移、脉冲、扫光、下划线生长动画与自动轮播"
+    }
+  },
+  "iconography": {
+    "style": "1.5px 描边、圆角端点、24 网格、无填充（状态点与品牌节点除外）",
+    "sizes": { "xs": "14px", "sm": "16px", "md": "18px", "lg": "20px", "xl": "24px" },
+    "strokeWidth": "1.5",
+    "library": "本地内联 SVG，路径风格自绘；不使用 CDN，不使用图标字体",
+    "rules": [
+      "禁止 emoji 充当图标",
+      "图标不得单独承载状态含义，必须配文字或 aria-label",
+      "同一页面同一语义只用一个图标",
+      "品牌 ark 标识不复用为普通图标"
+    ]
+  },
+  "layout": {
+    "ribbonHeight": "26px",
+    "deckTopHeight": "52px",
+    "deckNavHeight": "38px",
+    "deckTotalHeight": "90px",
+    "contentMax": "1560px",
+    "folioWidth": "300px",
+    "breakpoints": {
+      "phone": "0-767px",
+      "tablet": "768-1199px",
+      "desktop": "1200-1599px",
+      "wide": "1600px+"
+    },
+    "grid": {
+      "columns": 12,
+      "gap": "20px"
+    },
+    "shell": {
+      "desktop": "顶部 26px 状态缎带 + 90px 双行命令甲板 + 唯一滚动主区",
+      "tablet": "缎带保留；甲板导航横向滚动；无侧栏",
+      "phone": "缎带折叠为 22px；甲板 52px + 底部 5 入口；接管全屏"
+    }
+  },
+  "zIndex": {
+    "base": 0,
+    "sticky": 100,
+    "deck": 200,
+    "ribbon": 210,
+    "drawer": 300,
+    "modal": 400,
+    "palette": 450,
+    "toast": 500
+  },
+  "state": {
+    "task": {
+      "intake": { "label": "受理", "color": "neutral" },
+      "planning": { "label": "规划", "color": "info" },
+      "approval": { "label": "待批准", "color": "signal.500" },
+      "preflight": { "label": "预检", "color": "info" },
+      "running": { "label": "执行中", "color": "brand.500" },
+      "waitingHuman": { "label": "等待人工", "color": "signal.500" },
+      "verifying": { "label": "核验", "color": "info" },
+      "archiving": { "label": "归档", "color": "info" },
+      "pass": { "label": "通过", "color": "status.ok" },
+      "fail": { "label": "不通过", "color": "status.danger" },
+      "blockedHuman": { "label": "人工阻塞", "color": "status.blocked" },
+      "cancelled": { "label": "已取消", "color": "text.tertiary" },
+      "stopped": { "label": "已停止", "color": "text.tertiary" },
+      "infraError": { "label": "基础设施异常", "color": "status.danger" }
+    },
+    "knowledge": {
+      "candidate": { "label": "候选", "color": "neutral" },
+      "corroborated": { "label": "已佐证", "color": "info" },
+      "approved": { "label": "已批准", "color": "ok" },
+      "disputed": { "label": "有争议", "color": "disputed" },
+      "stale": { "label": "已陈旧", "color": "stale" },
+      "retracted": { "label": "已撤回", "color": "text.tertiary" }
+    },
+    "conn": {
+      "live": { "label": "实时", "color": "ok" },
+      "degraded": { "label": "降级轮询", "color": "warn" },
+      "offline": { "label": "离线", "color": "danger" }
+    }
+  },
+  "accessibility": {
+    "contrastTarget": "WCAG 2.2 AA",
+    "bodyContrast": ">= 4.5:1",
+    "largeTextContrast": ">= 3:1",
+    "nonTextContrast": ">= 3:1",
+    "focusRing": "2px #1F5F5B + 2px offset，不依赖颜色单独表达",
+    "minTouchTarget": "44px",
+    "minBodySize": "13px（桌面）/ 14px（手机）",
+    "reducedMotion": "prefers-reduced-motion: reduce 时禁用位移、脉冲与扫光",
+    "keyboard": "全部操作可 Tab 到达；tablist 支持左右方向键；Esc 关闭弹层；焦点归还触发元素"
+  }
+}

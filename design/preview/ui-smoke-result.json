@@ -1,0 +1,203 @@
+{
+  "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)",
+  "navHashes": [
+    "#/overview",
+    "#/tasks",
+    "#/think",
+    "#/knowledge",
+    "#/nodes",
+    "#/models",
+    "#/toolchain",
+    "#/push",
+    "#/agents",
+    "#/roundtable",
+    "#/system"
+  ],
+  "navResults": [
+    {
+      "hash": "#/overview",
+      "textLength": 1436,
+      "active": [
+        "overview",
+        "overview"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/tasks",
+      "textLength": 1086,
+      "active": [
+        "tasks",
+        "tasks"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/think",
+      "textLength": 1526,
+      "active": [
+        "think",
+        "think"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/knowledge",
+      "textLength": 1294,
+      "active": [
+        "knowledge",
+        "knowledge"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/nodes",
+      "textLength": 1120,
+      "active": [
+        "nodes"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/models",
+      "textLength": 1915,
+      "active": [
+        "models"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/toolchain",
+      "textLength": 918,
+      "active": [
+        "toolchain"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/push",
+      "textLength": 970,
+      "active": [
+        "push"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/agents",
+      "textLength": 1373,
+      "active": [
+        "agents"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/roundtable",
+      "textLength": 1065,
+      "active": [
+        "roundtable"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    },
+    {
+      "hash": "#/system",
+      "textLength": 1343,
+      "active": [
+        "system"
+      ],
+      "hOverflow": 0,
+      "bodyClass": "",
+      "title": "NoahsArk Console · 航次档案 · UI Prototype (MOCK DATA)"
+    }
+  ],
+  "detailResults": [
+    {
+      "hash": "#/tasks/ait-20261026-0412",
+      "textLength": 1355,
+      "hOverflow": 0,
+      "active": [
+        "tasks",
+        "tasks"
+      ]
+    },
+    {
+      "hash": "#/knowledge/kb-1042",
+      "textLength": 1054,
+      "hOverflow": 0,
+      "active": [
+        "knowledge",
+        "knowledge"
+      ]
+    },
+    {
+      "hash": "#/nodes/win009",
+      "textLength": 828,
+      "hOverflow": 0,
+      "active": [
+        "nodes"
+      ]
+    },
+    {
+      "hash": "#/takeover",
+      "textLength": 773,
+      "hOverflow": 0,
+      "active": [
+        "tasks",
+        "tasks"
+      ]
+    }
+  ],
+  "responsive": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "hOverflow": 0,
+      "topNav": "block",
+      "bottomNav": "none"
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "scrollWidth": 768,
+      "hOverflow": 0,
+      "topNav": "block",
+      "bottomNav": "none"
+    },
+    {
+      "name": "phone",
+      "width": 390,
+      "scrollWidth": 390,
+      "hOverflow": 0,
+      "topNav": "block",
+      "bottomNav": "flex"
+    }
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "externalRequests": [],
+  "navCount": 11,
+  "allPagesNonEmpty": true,
+  "noHorizontalOverflow": true,
+  "noExternalRequests": true,
+  "noConsoleErrors": true
+}

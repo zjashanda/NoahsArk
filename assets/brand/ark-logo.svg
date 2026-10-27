@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="arkTitle arkDesc">
+  <title id="arkTitle">NoahsArk 方舟标识</title>
+  <desc id="arkDesc">船体由五个节点连成一条收拢的弧线，甲板与桅杆构成方舟轮廓；桅顶单一朱砂节点代表人类决断。节点链同时读作证据链与 AI 网络。线条使用 currentColor，节点使用海青与朱砂，不含渐变与外链资源。</desc>
+
+  <!-- 船体轮廓：节点链构成收拢的船底，读作 ark 而非普通帆船 -->
+  <path d="M9 41 C13 47 20 51 32 53 C44 51 51 47 55 41 Z"
+        fill="currentColor" fill-opacity="0.06" stroke="none"/>
+
+  <!-- 甲板：一条水平结构线，把网络节点固定在船体上 -->
+  <path d="M9 41 H55" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.72"/>
+
+  <!-- 船体节点链：五个节点 + 四段弧线，既是船底也是证据链 -->
+  <path d="M9 41 C13 47 20 51 32 53 C44 51 51 47 55 41"
+        fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="9" cy="41" r="1.9" fill="#1F5F5B"/>
+  <circle cx="20" cy="49" r="1.9" fill="#1F5F5B"/>
+  <circle cx="32" cy="53" r="2.1" fill="#1F5F5B"/>
+  <circle cx="44" cy="49" r="1.9" fill="#1F5F5B"/>
+  <circle cx="55" cy="41" r="1.9" fill="#1F5F5B"/>
+
+  <!-- 桅杆与两条张索：把船体与上方网络节点连成三角结构 -->
+  <path d="M32 41 V15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M32 27 L9 41 M32 27 L55 41"
+        stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.5"/>
+  <circle cx="32" cy="27" r="2.2" fill="#1F5F5B"/>
+
+  <!-- 桅顶信号：全图唯一的朱砂节点，代表人类决断 -->
+  <circle cx="32" cy="11.5" r="2.7" fill="#B8482C"/>
+  <path d="M32 14.2 V15" stroke="#B8482C" stroke-width="1.4" stroke-linecap="round" opacity="0.65"/>
+</svg>

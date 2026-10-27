@@ -1,0 +1,256 @@
+{
+  "$schema": "https://design-tokens.org/schema.json",
+  "meta": {
+    "name": "NoahsArk UI v3 — Quiet Instrument",
+    "version": "3.0.0-preview",
+    "date": "2026-10-26",
+    "status": "comparison-candidate-pending-user-review",
+    "concept": "Quiet Instrument / 安静仪器",
+    "description": "NoahsArk 测试运营控制台的 Apple 风格对比变体。以白色与柔灰承载高密度操作事实，使用一个蓝色强调色与克制的语义状态色。所有数据均为 mock，不连接后端。",
+    "source": "docs/v2/UI-DESIGN-APPLE.md",
+    "baseline": "docs/v2/UI-DESIGN.md（v2 Voyage Ledger，保持不变）",
+    "mode": "light-first",
+    "cssPrefix": "--naa",
+    "tokenFile": "design/apple/design-tokens.json",
+    "prototype": "design/apple/ui-prototype.html",
+    "mockData": true,
+    "externalAssets": false,
+    "appleRelationship": "受 Apple.com 的排版、留白与材质语言启发；不复用 Apple 商标、产品图片、SF Pro 字体文件或任何 Apple 素材。"
+  },
+  "color": {
+    "surface": {
+      "canvas": { "value": "#F5F5F7", "description": "页面画布，柔灰底" },
+      "raised": { "value": "#FFFFFF", "description": "卡片、表格、任务头等承载面" },
+      "subtle": { "value": "#FBFBFD", "description": "状态条与轻量分区" },
+      "sunken": { "value": "#EDEDF0", "description": "轨道、开关关闭态、次级凹陷" },
+      "inverse": { "value": "#1D1D1F", "description": "深色终端与深色胶囊按钮" }
+    },
+    "border": {
+      "hairline": { "value": "rgba(0,0,0,0.07)", "description": "卡片、行、分区发丝线" },
+      "strong": { "value": "rgba(0,0,0,0.13)", "description": "输入框、次级按钮默认边线" },
+      "hover": { "value": "rgba(0,0,0,0.22)", "description": "交互面 hover 边线" },
+      "focus": { "value": "#0071E3", "description": "键盘焦点环外色" }
+    },
+    "text": {
+      "primary": { "value": "#1D1D1F", "description": "标题与正文近黑色" },
+      "secondary": { "value": "#424245", "description": "正文与表格内容" },
+      "tertiary": { "value": "#5F5F64", "description": "说明文字、标签，对比度 ≥4.5:1（设计自查）" },
+      "quaternary": { "value": "#6E6E73", "description": "次级元数据；仍保持 ≥4.5:1，不用于装饰以外的必要信息" },
+      "inverse": { "value": "#F5F5F7", "description": "深色底上的文字" },
+      "link": { "value": "#0066CC", "description": "链接文本，较按钮蓝更深以保证对比" }
+    },
+    "accent": {
+      "base": { "value": "#0071E3", "description": "唯一强调蓝：主按钮、焦点、进度" },
+      "hover": { "value": "#0077ED" },
+      "pressed": { "value": "#0068D1" },
+      "soft": { "value": "rgba(0,113,227,0.09)", "description": "浅蓝状态底" },
+      "wash": { "value": "rgba(0,113,227,0.05)", "description": "极轻交互底" }
+    },
+    "status": {
+      "ok": { "value": "#1A7F45", "description": "PASS、已验签、已归档" },
+      "okInk": { "value": "#14663A", "description": "浅底上的绿色文本" },
+      "okSoft": { "value": "rgba(26,127,69,0.09)" },
+      "warn": { "value": "#9A6400", "description": "等待人工、漂移、阻断" },
+      "warnInk": { "value": "#7D4A00" },
+      "warnSoft": { "value": "rgba(200,132,0,0.11)" },
+      "danger": { "value": "#C4312A", "description": "FAIL、错误、危险操作" },
+      "dangerInk": { "value": "#A82721" },
+      "dangerSoft": { "value": "rgba(196,49,42,0.09)" },
+      "neutral": { "value": "#6E6E73", "description": "未执行、离线、未知" },
+      "neutralSoft": { "value": "rgba(110,110,115,0.09)" },
+      "stale": { "value": "#6E6E73", "description": "陈旧使用中性色 + 虚线，不新增色相" },
+      "disputed": { "value": "#8A5A00", "description": "知识争议，较 WARN 更褐" },
+      "disputedSoft": { "value": "rgba(138,90,0,0.10)" }
+    },
+    "gate": {
+      "pass": { "value": "#1A7F45" },
+      "fail": { "value": "#C4312A" },
+      "pending": { "value": "#C7C7CC" },
+      "blocked": { "value": "#9A6400" },
+      "notApplicable": { "value": "#E1E1E6" }
+    },
+    "chart": {
+      "track": { "value": "#E8E8ED" },
+      "series1": { "value": "#0071E3" },
+      "series2": { "value": "#1A7F45" },
+      "series3": { "value": "#9A6400" },
+      "series4": { "value": "#6E6E73" },
+      "grid": { "value": "rgba(0,0,0,0.07)" }
+    },
+    "terminal": {
+      "background": { "value": "#1D1D1F" },
+      "raised": { "value": "#2C2C2E" },
+      "text": { "value": "#F5F5F7" },
+      "dim": { "value": "#86868B" },
+      "role": { "value": "#64D2FF" },
+      "ok": { "value": "#7DD3A0" },
+      "warn": { "value": "#FFB340" },
+      "danger": { "value": "#FF7A7A" },
+      "line": { "value": "rgba(255,255,255,0.10)" }
+    },
+    "overlay": {
+      "scrim": { "value": "rgba(0,0,0,0.30)" },
+      "blur": { "value": "6px" },
+      "material": { "value": "rgba(255,255,255,0.82)", "description": "顶栏半透明材质底" },
+      "bottomBar": { "value": "rgba(255,255,255,0.88)" }
+    }
+  },
+  "typography": {
+    "family": {
+      "sans": {
+        "value": "-apple-system, BlinkMacSystemFont, \"SF Pro Display\", \"SF Pro Text\", \"Segoe UI\", \"Microsoft YaHei UI\", sans-serif",
+        "description": "仅使用本机系统字体，不加载外部字体文件"
+      },
+      "mono": {
+        "value": "\"SFMono-Regular\", \"Cascadia Mono\", \"Cascadia Code\", Consolas, \"Microsoft YaHei UI\", monospace",
+        "description": "ID、哈希、时间、终端"
+      }
+    },
+    "size": {
+      "display": { "value": "56px", "description": "桌面页面标题" },
+      "displayTablet": { "value": "40px" },
+      "displayPhone": { "value": "32px" },
+      "hero": { "value": "46px", "description": "总览陈述句标题" },
+      "taskTitle": { "value": "38px", "description": "任务详情标题" },
+      "h2": { "value": "28px" },
+      "cardTitle": { "value": "16px" },
+      "body": { "value": "14px" },
+      "bodySmall": { "value": "13px" },
+      "caption": { "value": "12.5px" },
+      "micro": { "value": "11px" },
+      "eyebrow": { "value": "11px" }
+    },
+    "weight": {
+      "regular": { "value": 400 },
+      "medium": { "value": 500 },
+      "semibold": { "value": 600 },
+      "bold": { "value": 700 }
+    },
+    "lineHeight": {
+      "display": { "value": 1.04 },
+      "heading": { "value": 1.15 },
+      "body": { "value": 1.55 },
+      "dense": { "value": 1.4 }
+    },
+    "tracking": {
+      "display": { "value": "-0.035em" },
+      "heading": { "value": "-0.02em" },
+      "body": { "value": "-0.006em" },
+      "eyebrow": { "value": "0.07em" }
+    }
+  },
+  "space": {
+    "1": { "value": "4px" },
+    "2": { "value": "8px" },
+    "3": { "value": "12px" },
+    "4": { "value": "16px" },
+    "5": { "value": "24px" },
+    "6": { "value": "32px" },
+    "7": { "value": "40px" },
+    "8": { "value": "48px" },
+    "9": { "value": "64px" },
+    "10": { "value": "80px" },
+    "scale": { "value": "8pt", "description": "间距以 8pt 为基准，允许 4px 半档" }
+  },
+  "radius": {
+    "sm": { "value": "10px" },
+    "md": { "value": "14px" },
+    "lg": { "value": "18px" },
+    "xl": { "value": "22px" },
+    "2xl": { "value": "28px" },
+    "pill": { "value": "999px" }
+  },
+  "shadow": {
+    "none": { "value": "none", "description": "默认卡片无阴影，靠白面与发丝线分层" },
+    "raised": { "value": "0 1px 3px rgba(0,0,0,0.09)", "description": "仅用于分段控件选中态" },
+    "material": { "value": "0 10px 30px rgba(0,0,0,0.06)", "description": "主滚动区滚动后的顶栏" },
+    "modal": { "value": "0 30px 90px rgba(0,0,0,0.24)" },
+    "toast": { "value": "0 12px 40px rgba(0,0,0,0.22)" }
+  },
+  "motion": {
+    "duration": {
+      "fast": { "value": "140ms" },
+      "base": { "value": "220ms" },
+      "slow": { "value": "320ms" }
+    },
+    "easing": {
+      "standard": { "value": "cubic-bezier(0.25, 0.1, 0.25, 1)" }
+    },
+    "reducedMotion": {
+      "value": "prefers-reduced-motion: reduce → 动画与过渡降至 0.001ms，仅保留状态切换与进度数值",
+      "description": "不使用弹跳、循环装饰或无限脉冲；实时圆点脉冲在减弱动效下停止"
+    }
+  },
+  "layout": {
+    "contentMax": { "value": "1160px" },
+    "pagePaddingDesktop": { "value": "48px 40px 80px" },
+    "pagePaddingTablet": { "value": "48px 28px 80px" },
+    "pagePaddingPhone": { "value": "24px 20px 100px" },
+    "topBar": { "value": "62px" },
+    "navBar": { "value": "48px" },
+    "statusRibbon": { "value": "28px" },
+    "mockBanner": { "value": "30px" },
+    "bottomTabBar": { "value": "64px" },
+    "breakpoints": {
+      "desktop": { "value": "≥1200px" },
+      "tablet": { "value": "768–1199px" },
+      "phone": { "value": "≤767px" }
+    }
+  },
+  "components": {
+    "button": {
+      "height": { "value": "42px" },
+      "heightSmall": { "value": "36px" },
+      "heightExtraSmall": { "value": "30px" },
+      "radius": { "value": "999px" },
+      "primaryBackground": { "value": "#0071E3" },
+      "primaryText": { "value": "#FFFFFF" },
+      "secondaryBackground": { "value": "#FFFFFF" },
+      "minTouchTargetPhone": { "value": "44px" }
+    },
+    "card": {
+      "background": { "value": "#FFFFFF" },
+      "border": { "value": "1px solid rgba(0,0,0,0.07)" },
+      "radius": { "value": "22px" },
+      "padding": { "value": "26px" }
+    },
+    "navigation": {
+      "activeStyle": { "value": "深墨胶囊 + 白字；不使用彩色侧边条" },
+      "material": { "value": "rgba(255,255,255,0.82) + saturate(180%) blur(20px)" },
+      "itemMinHeight": { "value": "32px" },
+      "mobileDrawerItem": { "value": "52px" }
+    },
+    "table": {
+      "headerStyle": { "value": "11px / 600 / #6E6E73 / 发丝下边线" },
+      "rowPadding": { "value": "14px" },
+      "hover": { "value": "#FBFBFD" }
+    },
+    "badge": {
+      "height": { "value": "23px" },
+      "radius": { "value": "999px" },
+      "fontSize": { "value": "11px" }
+    },
+    "input": {
+      "height": { "value": "44px" },
+      "radius": { "value": "12px" },
+      "focusRing": { "value": "0 0 0 4px rgba(0,113,227,0.12)" }
+    },
+    "terminal": {
+      "background": { "value": "#1D1D1F" },
+      "radius": { "value": "18px" },
+      "fontSize": { "value": "12px" },
+      "lineHeight": { "value": 1.75 }
+    }
+  },
+  "accessibility": {
+    "focusVisible": { "value": "3px solid rgba(0,113,227,0.62), offset 2px" },
+    "minTouchTarget": { "value": "44px" },
+    "bodyContrastTarget": { "value": "≥4.5:1（正文）" },
+    "largeTextContrastTarget": { "value": "≥3:1（≥18.66px 粗体或 24px）" },
+    "statusNotColorOnly": { "value": "状态色始终与文字标签、圆点或图标并用" },
+    "keyboard": { "value": "Tab 顺序等于阅读顺序；Esc 关闭弹层；Ctrl/Cmd+K 打开命令面板；任务页签支持左右方向键" },
+    "cjk": { "value": "系统字体渲染；不使用会裁切中文降部的负行高；移动端卡片化表格避免挤压中文列" },
+    "certification": { "value": "未做 WCAG AA 认证；仅按设计目标自查，需要真实审计后才能声明" }
+  },
+  "disclaimer": "本令牌文件与原型均为设计对比材料。全部数据为 mock，不包含后端、真实 API、真实模型调用、真实设备动作或真实接管能力。"
+}

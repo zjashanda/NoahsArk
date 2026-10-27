@@ -1,0 +1,524 @@
+{
+  "title": "NoahsArk UI v3 · Quiet Instrument · Apple-inspired prototype (MOCK DATA)",
+  "generatedAt": "2026-10-26T13:46:19.895Z",
+  "prototype": "noahsark/design/apple/ui-prototype.html",
+  "tokens": "noahsark/design/apple/design-tokens.json",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 1200
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "routeCount": 15,
+  "navCount": 11,
+  "navHashes": [
+    "#/overview",
+    "#/tasks",
+    "#/think",
+    "#/knowledge",
+    "#/nodes",
+    "#/models",
+    "#/toolchain",
+    "#/push",
+    "#/agents",
+    "#/roundtable",
+    "#/system"
+  ],
+  "routes": [
+    {
+      "name": "overview",
+      "hash": "#/overview",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1418,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1418,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1418,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "tasks",
+      "hash": "#/tasks",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1150,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1150,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1009,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "think",
+      "hash": "#/think",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1526,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1526,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1526,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "knowledge",
+      "hash": "#/knowledge",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1294,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1294,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1294,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "nodes",
+      "hash": "#/nodes",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1120,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1120,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1120,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "models",
+      "hash": "#/models",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1915,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1915,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1915,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "toolchain",
+      "hash": "#/toolchain",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 918,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 918,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 918,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "push",
+      "hash": "#/push",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 970,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 970,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 958,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "agents",
+      "hash": "#/agents",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1375,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1375,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1375,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "roundtable",
+      "hash": "#/roundtable",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1065,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1065,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1065,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "system",
+      "hash": "#/system",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1343,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1343,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1343,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "task-detail",
+      "hash": "#/tasks/ait-20261026-0412/summary",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1355,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "38px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1355,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1355,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "26px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "knowledge-detail",
+      "hash": "#/knowledge/kb-1042",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1054,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1054,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 1054,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "node-detail",
+      "hash": "#/nodes/win009",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 834,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "56px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 834,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "40px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 834,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "32px"
+        }
+      },
+      "pass": true
+    },
+    {
+      "name": "takeover",
+      "hash": "#/takeover/ait-20261026-0412",
+      "viewports": {
+        "desktop": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 784,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "20px"
+        },
+        "tablet": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 784,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "20px"
+        },
+        "phone": {
+          "pass": true,
+          "nonEmpty": true,
+          "textLength": 784,
+          "pageOverflow": 0,
+          "mainOverflow": 0,
+          "h1Size": "18px"
+        }
+      },
+      "pass": true
+    }
+  ],
+  "screenshots": [
+    "noahsark/design/apple/preview/overview-desktop.png",
+    "noahsark/design/apple/preview/overview-tablet.png",
+    "noahsark/design/apple/preview/overview-phone.png",
+    "noahsark/design/apple/preview/task-detail-desktop.png",
+    "noahsark/design/apple/preview/models-desktop.png",
+    "noahsark/design/apple/preview/task-detail-phone.png",
+    "noahsark/design/apple/preview/task-detail-phone-scrolled.png"
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "externalRequests": [],
+  "allPagesNonEmpty": true,
+  "noHorizontalOverflow": true,
+  "noConsoleErrors": true,
+  "noPageErrors": true,
+  "noExternalRequests": true,
+  "failedRoutes": [],
+  "allPass": true
+}
