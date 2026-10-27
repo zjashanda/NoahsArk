@@ -1,0 +1,63 @@
+%%{init: {"themeVariables": {"fontSize": "12px"}, "flowchart": {"nodeSpacing": 10, "rankSpacing": 12, "diagramPadding": 6}}}%%
+flowchart LR
+  subgraph P1["① 受理检索"]
+    direction TB
+    A1(["1 受理"])
+    A2["2 项目知识"]
+    A3["3 工具知识"]
+    A1 -->|"需求"| A2
+    A2 -->|"方法"| A3
+  end
+  subgraph P2["② 方案批准"]
+    direction TB
+    A4["4 方案用例"]
+    A5{"5 评审批准"}
+    A4 -->|"候选"| A5
+  end
+  subgraph P3["③ 真实预检"]
+    direction TB
+    A6["6 真实预检"]
+  end
+  subgraph P4["④ 正式执行"]
+    direction TB
+    A7["7 正式执行"]
+    A8["8 自修复"]
+    A7 -->|"证据"| A8
+  end
+  subgraph P5["⑤ 独立验证"]
+    direction TB
+    A9["9 独立验证"]
+  end
+  subgraph P6["⑥ 门禁归档"]
+    direction TB
+    A10["10 门禁<br/>C1–C5 · C7"]
+    A11[("11 归档 C6")]
+    A12(["12 签核交付"])
+    A10 -->|"C6"| A11
+    A11 -->|"回执"| A12
+  end
+
+  P1 -->|"入口"| P2
+  P2 -->|"冻结"| P3
+  P3 -->|"通过"| P4
+  P4 -->|"证据"| P5
+  P5 -->|"一致"| P6
+
+  classDef startEnd fill:#F5F5F7,stroke:#6E6E73,stroke-width:1.5px,color:#1D1D1F
+  classDef action fill:#EAF2FD,stroke:#0071E3,stroke-width:1.5px,color:#0B3D6B
+  classDef decision fill:#F5F5F7,stroke:#1D1D1F,stroke-width:1.5px,color:#1D1D1F
+  classDef evidence fill:#EFEFF2,stroke:#6E6E73,stroke-width:1.5px,color:#1D1D1F
+  classDef success fill:#E7F6EA,stroke:#2E7D32,stroke-width:1.5px,color:#14532D
+
+  class A1 startEnd
+  class A2,A3,A4,A6,A7,A8,A9,A10 action
+  class A5 decision
+  class A11 evidence
+  class A12 success
+
+  style P1 fill:#FCFCFD,stroke:#D2D2D7,stroke-width:1px,color:#6E6E73
+  style P2 fill:#FCFCFD,stroke:#D2D2D7,stroke-width:1px,color:#6E6E73
+  style P3 fill:#FCFCFD,stroke:#D2D2D7,stroke-width:1px,color:#6E6E73
+  style P4 fill:#FCFCFD,stroke:#D2D2D7,stroke-width:1px,color:#6E6E73
+  style P5 fill:#FCFCFD,stroke:#D2D2D7,stroke-width:1px,color:#6E6E73
+  style P6 fill:#FCFCFD,stroke:#D2D2D7,stroke-width:1px,color:#6E6E73

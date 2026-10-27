@@ -1,0 +1,49 @@
+%%{init: {"themeVariables": {"fontSize": "13px"}, "flowchart": {"nodeSpacing": 24, "rankSpacing": 34, "diagramPadding": 8}}}%%
+flowchart TD
+  D1{"阶段 6<br/>预执行通过?"}
+  H1[/"人工确认问题点<br/>修订方案 · 参数 · 节点 · 脚本<br/>重新批准"/]
+  R["阶段 7 正式执行<br/>真实节点 · 设备 · 脚本"]
+  D0{"回执校验<br/>run_mode = real ?"}
+  X["拒绝作为完成证据<br/>dry-run / mock / replay"]
+  D2{"FAIL 可收敛?"}
+  F["阶段 8 自修复<br/>修复后重跑"]
+  V["阶段 9 独立验证<br/>从原始证据重算"]
+  D3{"重算一致?"}
+  D4{"C1–C7 满足?<br/>C6 归档前补齐"}
+  H3(["BLOCKED_HUMAN<br/>终态 · 等待人工"])
+  C{"结论为 PASS?"}
+  E(["PASS · 归档<br/>task.completed"])
+  S(["STOPPED / CANCELLED / INFRA_ERROR<br/>保留证据，不产生产品结论"])
+  FAIL(["FAIL 终态<br/>仅需求矛盾或固件不满足"])
+
+  D1 -->|"否"| H1
+  H1 -->|"修订后重新预执行"| D1
+  D1 -->|"是"| R
+  R -->|"外部停止 / 设备故障"| S
+  R -->|"执行完成"| D0
+  D0 -->|"否"| X
+  D0 -->|"是：签名回执"| D2
+  D2 -->|"可修复"| F
+  F -->|"复测"| R
+  D2 -->|"不可修复 / 产品缺陷"| V
+  V -->|"验证结论"| D3
+  D3 -->|"不一致：阻断 PASS<br/>人工复核后重算"| V
+  D3 -->|"一致"| D4
+  D4 -->|"不满足"| H3
+  D4 -->|"满足"| C
+  C -->|"是"| E
+  C -->|"否"| FAIL
+
+  classDef startEnd fill:#F5F5F7,stroke:#6E6E73,stroke-width:1.5px,color:#1D1D1F
+  classDef action fill:#EAF2FD,stroke:#0071E3,stroke-width:1.5px,color:#0B3D6B
+  classDef decision fill:#F5F5F7,stroke:#1D1D1F,stroke-width:1.5px,color:#1D1D1F
+  classDef human fill:#FFF3E0,stroke:#B26A00,stroke-width:1.5px,color:#6B3E00
+  classDef stop fill:#FDECEC,stroke:#C62828,stroke-width:1.5px,color:#7F1D1D
+  classDef success fill:#E7F6EA,stroke:#2E7D32,stroke-width:1.5px,color:#14532D
+
+  class R,F,V action
+  class D0,D1,D2,D3,D4,C decision
+  class H1,H3 human
+  class X,FAIL stop
+  class E success
+  class S startEnd
