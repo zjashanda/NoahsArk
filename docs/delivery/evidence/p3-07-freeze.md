@@ -67,3 +67,9 @@ Node Agent protocol/certs, TCL hardware window
 1. 所有者对 §3 六项给出选择或授权默认方案。
 2. 更新 P3-03/P3-07 为 ACCEPTED/FROZEN。
 3. 再进入 Phase 4 冻结与 Phase 5 全量实施。
+
+## 7. 所有者裁决（2026-10-29）
+
+所有者回复“后续都按建议执行”。采用本文 §2 的技术建议作为 **V0.0.1 开发基线**：原生 ESM、pyright、GitHub Actions、无强制容器、NSSM、Caddy。生产认证/证据存储/部署/NAS/TCL 仍为后续门。
+
+状态更新为 **FROZEN-CANDIDATE（development baseline）**；不是生产冻结。

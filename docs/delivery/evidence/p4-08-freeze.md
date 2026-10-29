@@ -43,3 +43,9 @@ Node Agent protocol/certs, TCL hardware window
 2. 冻结 Phase 3 施工方案。
 3. 补齐 P4-05 真机事实与判定实现证据。
 4. 再冻结 P4-08，之后才进入 Phase 6 验收执行。
+
+## 5. 所有者裁决（2026-10-29）
+
+所有者回复“后续都按建议执行”。P4-08 采用 **L1–L2 开发基线冻结**；L3–L5 仍依赖真实 TCL 设备、正式证据存储和部署环境，保持条件冻结。
+
+状态更新为 **FROZEN-CANDIDATE（L1–L2） / CONDITIONAL（L3–L5）**。
