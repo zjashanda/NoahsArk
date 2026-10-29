@@ -1,0 +1,23 @@
+seed ok
+  intake_drafts: 3
+  tasks: 2
+  task_revisions: 5
+  approvals: 1
+  gates: 8
+  cases: 5
+  runs: 4
+  attempts: 3
+  leases: 3
+  devices: 4
+  nodes: 2
+  evidence_items: 5
+  evidence_manifests: 1
+  reports: 2
+  knowledge_items: 3
+  knowledge_candidates: 4
+  agents: 3
+  reviews: 2
+  audit_events: 5
+  roles: 4
+  users: 5
+  settings: 12

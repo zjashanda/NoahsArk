@@ -1,0 +1,106 @@
+$ node checks/contract-check.mjs
+PASS  routes.json schema_version is 1.0
+PASS  routes.json server_authoritative=false
+PASS  routes.json has 39 routes (found 39)
+PASS  route-manifest and routes.json counts match
+PASS  routes.json paths are unique
+PASS  route-manifest paths are unique
+PASS  route IDs are unique
+PASS  route-manifest mirrors routes.json exactly (id/path/area/family)
+PASS  MC has 1 routes (found 1)
+PASS  IN has 3 routes (found 3)
+PASS  TK has 9 routes (found 9)
+PASS  RN has 3 routes (found 3)
+PASS  EV has 3 routes (found 3)
+PASS  DV has 3 routes (found 3)
+PASS  RP has 2 routes (found 2)
+PASS  KN has 3 routes (found 3)
+PASS  RT has 2 routes (found 2)
+PASS  AG has 3 routes (found 3)
+PASS  AU has 3 routes (found 3)
+PASS  ST has 4 routes (found 4)
+PASS  12 areas are registered
+PASS  page module exists for mission
+PASS  page module exists for intake
+PASS  page module exists for tasks
+PASS  page module exists for runs
+PASS  page module exists for evidence
+PASS  page module exists for devices
+PASS  page module exists for reports
+PASS  page module exists for knowledge
+PASS  page module exists for runtime
+PASS  page module exists for agents
+PASS  page module exists for audit
+PASS  page module exists for settings
+PASS  12 family modules are used (found 12)
+PASS  required file exists: index.html
+PASS  required file exists: favicon.svg
+PASS  required file exists: README.md
+PASS  required file exists: styles/tokens.css
+PASS  required file exists: styles/base.css
+PASS  required file exists: styles/shell.css
+PASS  required file exists: styles/components.css
+PASS  required file exists: src/app.js
+PASS  required file exists: src/router.js
+PASS  required file exists: src/shell.js
+PASS  required file exists: src/fixtures.js
+PASS  required file exists: src/semantics.js
+PASS  required file exists: src/components.js
+PASS  required file exists: src/icons.js
+PASS  required file exists: src/route-manifest.js
+PASS  no external http(s) URLs in HTML/CSS/JS
+PASS  no CSS @import
+PASS  no remote CSS url()
+PASS  no remote scripts
+PASS  no gradients
+PASS  no glass/backdrop-filter
+PASS  no emoji characters in source
+PASS  no private key header in source
+PASS  no hardcoded password in source
+PASS  no hardcoded secret in source
+PASS  no hardcoded bearer token in source
+PASS  no private IPv4 address in source
+PASS  token defined: --naa-surface-canvas
+PASS  token defined: --naa-surface-raised
+PASS  token defined: --naa-surface-sunken
+PASS  token defined: --naa-ink-primary
+PASS  token defined: --naa-ink-secondary
+PASS  token defined: --naa-ink-tertiary
+PASS  token defined: --naa-line
+PASS  token defined: --naa-action
+PASS  token defined: --naa-status-neutral
+PASS  token defined: --naa-status-attention
+PASS  token defined: --naa-status-danger
+PASS  token defined: --naa-status-success-limited
+PASS  token defined: --naa-radius-sm
+PASS  token defined: --naa-radius-md
+PASS  token defined: --naa-radius-lg
+PASS  token defined: --naa-radius-pill
+PASS  token defined: --naa-space-1
+PASS  token defined: --naa-space-10
+PASS  token defined: --naa-type-display
+PASS  token defined: --naa-type-caption
+PASS  dark theme tokens are defined
+PASS  formal PASS execution axis is exact
+PASS  formal PASS evidence axis is exact
+PASS  formal PASS verification axis is exact
+PASS  unknown progress mode is present
+PASS  fixture source is declared
+PASS  fixture schema_version is declared
+PASS  fixtures are non-authoritative
+PASS  formal PASS fixture exists
+PASS  pending STOP fixture exists
+PASS  node observed facts are marked non-decisional
+PASS  runtime write actions cite Q-09
+PASS  agent governance writes cite Q-09
+PASS  index loads the module entry
+PASS  index loads ES modules
+PASS  index loads all style layers
+PASS  candidate ribbon is labeled
+PASS  not-frozen boundary is visible
+PASS  mock-data boundary is visible
+
+100 passed, 0 failed
+$ node checks/smoke-check.mjs
+
+249 passed, 0 failed

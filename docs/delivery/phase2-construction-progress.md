@@ -14,7 +14,7 @@
 | W2 | 39 条只读 API、统一 envelope、display_id/UUID、五轴投影 | **DONE** | batch1 22 passed；batch2 37 passed；batch3 53 passed；batch3 curl 全 200 | 保持 |
 | W3 | 四类写接口：Intake 草稿、审批、STOP、释放 | **DONE** | 四个 POST 路由；`pytest` 79 passed；ruff clean；live curl 201 | 保持 |
 | W4 | UI `api.js` / `data-source.js` / `?api=1` / 角色头 / 回退 | **DONE** | API 模式 39/39、fixture 39/39、0 console error、contract 100/100、smoke 249/249 | 保持 |
-| W5 | pytest、ruff、OpenAPI、curl、截图、证据、进度 | **IN PROGRESS** | 开始汇总 | 证据目录与最终台账 |
+| W5 | pytest、ruff、OpenAPI、curl、截图、证据、进度 | **DONE** | 证据目录 `docs/delivery/backend-slice-evidence/`；79 tests、ruff clean、38 read 200、4 writes 201/409 | 保持 |
 
 ## 2. W3 当前已知问题与处理
 
@@ -61,10 +61,10 @@ node checks/smoke-check.mjs
 
 ## 5. 完成定义
 
-- [ ] W3 四类写接口 + 测试 + 审计通过。
-- [ ] W4 `?api=1` 下 39/39 路由、0 console error、角色权限正确。
-- [ ] W5 pytest/ruff/OpenAPI/证据/进度全绿。
-- [ ] Phase 2 计划 6 个波次全部勾选，且没有“冻结/生产可用”虚假声明。
+- [x] W3 四类写接口 + 测试 + 审计通过。
+- [x] W4 `?api=1` 下 39/39 路由、0 console error、角色权限正确。
+- [x] W5 pytest/ruff/OpenAPI/证据/进度全绿。
+- [x] Phase 2 计划 6 个波次全部勾选，且没有“冻结/生产可用”虚假声明。
 
 ## 6. 状态说明
 

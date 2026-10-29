@@ -1,0 +1,13 @@
+cd /home/bszheng/NoahsArk/apps/control_plane
+. ../../.venv/bin/activate
+alembic check
+pytest --disable-warnings -q
+ruff check noahsark tests
+python -m noahsark.seed
+
+curl -s http://127.0.0.1:8000/healthz
+curl -s http://127.0.0.1:8000/openapi.json
+
+cd /home/bszheng/NoahsArk/design/ui-app
+node checks/contract-check.mjs
+node checks/smoke-check.mjs
