@@ -33,26 +33,43 @@ fi
 git commit -m "$MSG"
 echo "sync: local commit $(git rev-parse --short HEAD)"
 
-if timeout 60 git push origin main; then
-  echo "sync: pushed to origin/main"
-  exit 0
-fi
-
-# GitHub HTTPS is blocked on some networks; SSH over 443 usually still works.
+# Push is best-effort: retry HTTPS and SSH-over-443, then record a pending
+# marker and exit 0 so phase execution is never blocked by network failure.
 SSH_KEY="${NAA_SSH_KEY:-$HOME/.ssh/id_ed25519_zjashanda_skills}"
 SSH_REMOTE="ssh-origin"
 SSH_URL="ssh://git@ssh.github.com:443/zjashanda/NoahsArk.git"
-if [ -f "$SSH_KEY" ]; then
-  if ! git remote get-url "$SSH_REMOTE" >/dev/null 2>&1; then
-    git remote add "$SSH_REMOTE" "$SSH_URL"
+
+try_push() {
+  local i
+  for i in 1 2; do
+    if timeout 30 git push origin main; then
+      echo "sync: pushed to origin/main"
+      return 0
+    fi
+    sleep 3
+  done
+  if [ -f "$SSH_KEY" ]; then
+    if ! git remote get-url "$SSH_REMOTE" >/dev/null 2>&1; then
+      git remote add "$SSH_REMOTE" "$SSH_URL"
+    fi
+    for i in 1 2; do
+      if timeout 60 env GIT_SSH_COMMAND="ssh -i $SSH_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -p 443" git push "$SSH_REMOTE" main; then
+        echo "sync: pushed via ssh.github.com:443"
+        return 0
+      fi
+      sleep 3
+    done
   fi
-  if timeout 120 env GIT_SSH_COMMAND="ssh -i $SSH_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -p 443" git push "$SSH_REMOTE" main; then
-    echo "sync: pushed via ssh.github.com:443"
-    exit 0
-  fi
+  return 1
+}
+
+if try_push; then
+  rm -f .omo/sync-pending.log
+  exit 0
 fi
 
-echo "sync: push failed (network/proxy/credentials). Commit kept locally."
-echo "sync: retry with: cd $(pwd) && git push origin main"
-echo "sync: or: GIT_SSH_COMMAND='ssh -i $SSH_KEY -p 443' git push ssh-origin main"
-exit 2
+mkdir -p .omo
+printf '%s commit=%s reason=push_unreachable\n' "$(date -Iseconds)" "$(git rev-parse --short HEAD)" >> .omo/sync-pending.log
+echo "sync: push pending (network). Local commit kept; implementation continues."
+echo "sync: retry later: cd $(pwd) && git push origin main"
+exit 0
