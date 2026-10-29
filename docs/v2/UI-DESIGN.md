@@ -1,11 +1,20 @@
 # NoahsArk UI 设计规范 v2.0
 
-> 状态：设计交付，待用户评审（P7-00）。本文只描述界面、交互与设计约束，不包含产品实现。
+> 状态：**历史参考（历史/已取代 2026-10-28）**。原“设计交付，待用户评审（P7-00）”不再有效；本文只保留旧 v2「航次档案」界面、交互与设计约束，不包含产品实现。
 > 范围：总览、任务、任务详情、受理与思考、知识、节点与设备、模型、工具链与版本、推送、Agent、圆桌、接管、系统设置。
-> 代码基线：Flask + Jinja2 + 原生 ES Modules + SSE + SQLite WAL（D2）。设计令牌可直接映射为 `--na-*` CSS 变量。
+> 代码基线：**PostgreSQL 是唯一正式数据库**；原“SQLite WAL（D2）”已取代（历史/已取代 2026-10-28）。设计令牌可直接映射为 `--na-*` CSS 变量。
 > 配套文件：`design/design-tokens.json`、`assets/brand/ark-logo.svg`、`design/wireframes/`、`design/ui-prototype.html`、`docs/v2/UI-REVIEW.md`。
 > 原型声明：`design/ui-prototype.html` 是 **DESIGN PROTOTYPE，MOCK DATA**，不连接后端，不代表任何能力已经实现。
 > 原创性：本规范从第一性原理建立，不继承任何既有平台 UI；审计与 grep 证据见 `docs/v2/UI-ORIGINALITY.md`。
+
+## 规范同步说明（2026-10-28，P0-03）
+
+> **本文整体转为历史参考，不再是当前 UI 或契约事实源。** 当前执行主线是 [NoahsArk 平台交付总计划](../../.omo/plans/noahsark-platform-delivery.md)，Apple 风格新基线由 Phase 1 冻结（当前候选 [UI-DESIGN-APPLE.md](./UI-DESIGN-APPLE.md)），逐项冲突与验证见 [openspec 与 docs/v2 规范同步记录](../delivery/openspec-v2-sync.md)。
+>
+> - 本文所有 “SQLite WAL” 均为历史/已取代（2026-10-28）；PostgreSQL 是唯一正式数据库。
+> - 本文的 C1 至 C7 是旧完成/归档门禁，不是当前判定模型。当前判定采用五轴（execution / validity / business / evidence / verification）并分离执行状态、设备占用、证据状态和最终判定；C1–C7 仅保留为旧门禁追溯，映射见 [SOLUTION.md 5.4 节](./SOLUTION.md#54-状态五轴判定与分离事实) 和同步记录。
+> - 已启动冻结压测在断线/心跳过期后继续离线执行，设备保持占用；重连先处理 STOP；缺 `cleanup_receipt` 只阻断设备释放确认，不自动判定证据不完整。凡本文与这些已批准规则冲突处，以总计划、已批准 `.omo/drafts` 正文和同步记录为准。
+> - 旧 UI 流程中的“设备/租约失败 → `INFRA_ERROR`”、C1–C7 终态徽章和“心跳超时”文案均为历史；不得据此停止已启动冻结压测或回收设备。
 
 ---
 
@@ -1872,13 +1881,13 @@ NoahsArk
 #### 区块与数据
 
 1. **锁定摘要**
-   - lock hash（可复制）、生成时间、平台 commit、lstest pin/tree sha、Python、SQLite。
+   - lock hash（可复制）、生成时间、平台 commit、lstest pin/tree sha、Python、PostgreSQL（历史/已取代 2026-10-28：原 SQLite）。
    - 最近验证时间与结果；未验证显示“未验证”。
 2. **漂移横幅**
    - 组件、已安装 → 锁定、兼容范围、影响（真实执行阻断/仅提示）、建议动作（回滚/确认/运行冒烟）。
    - 不使用全屏氧化红；赭石横幅 + 明确阻断范围。
 3. **组件矩阵**
-   - 组件：opencode、OMO、每个自研插件、每个平台使用的 skill、Python、SQLite、lstest、平台 commit。
+   - 组件：opencode、OMO、每个自研插件、每个平台使用的 skill、Python、PostgreSQL（历史/已取代 2026-10-28：原 SQLite）、lstest、平台 commit。
    - 列：已安装、锁定、兼容范围、状态（一致/漂移/不兼容/未知）、最近冒烟、操作。
    - 状态：一致绿、漂移赭石、不兼容红、未知灰。
    - 操作：查看详情、复制版本、跳转升级记录；不显示二进制内容。
@@ -2286,7 +2295,7 @@ NoahsArk
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ 审计：最近 50 条，筛选 actor/action/target/result                             │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ 存储：SQLite WAL、busy_timeout、备份、迁移版本、磁盘使用                      │
+│ 存储：PostgreSQL、事务/约束/索引、备份、迁移版本、磁盘使用（历史/已取代 2026-10-28：原 SQLite WAL）
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ 危险区：关闭 V2、清理死信、重建索引（均需二次确认）                           │
 └──────────────────────────────────────────────────────────────────────────────┘

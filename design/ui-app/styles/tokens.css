@@ -1,0 +1,125 @@
+/* NoahsArk Cloudline — semantic tokens
+   CANDIDATE UI · PROTOTYPE · NOT FROZEN · MOCK DATA
+   Light and dark are independently assigned; no gradients, no decorative color. */
+
+:root {
+  color-scheme: light;
+
+  --naa-surface-canvas: #F5F5F7;
+  --naa-surface-raised: #FFFFFF;
+  --naa-surface-sunken: #EDEDF0;
+  --naa-surface-hover: #F0F0F3;
+  --naa-surface-selected: #E8F0FB;
+  --naa-surface-overlay: rgba(0, 0, 0, 0.28);
+
+  --naa-ink-primary: #1D1D1F;
+  --naa-ink-secondary: #424245;
+  --naa-ink-tertiary: #5F5F64;
+  --naa-ink-inverse: #FFFFFF;
+
+  --naa-line: rgba(0, 0, 0, 0.07);
+  --naa-line-strong: rgba(0, 0, 0, 0.14);
+
+  --naa-action: #0071E3;
+  --naa-action-hover: #0062C4;
+  --naa-action-ink: #FFFFFF;
+  --naa-action-soft: rgba(0, 113, 227, 0.09);
+  --naa-focus: #0071E3;
+
+  --naa-status-neutral: #6E6E73;
+  --naa-status-neutral-soft: rgba(110, 110, 115, 0.10);
+  --naa-status-attention: #9A6400;
+  --naa-status-attention-soft: rgba(154, 100, 0, 0.10);
+  --naa-status-danger: #C4312A;
+  --naa-status-danger-soft: rgba(196, 49, 42, 0.09);
+  --naa-status-success-limited: #1A7F45;
+  --naa-status-success-soft: rgba(26, 127, 69, 0.09);
+
+  /* Text-safe status colors: small badges must reach 4.5:1 on their soft fill. */
+  --naa-action-text: #005BB8;
+  --naa-status-neutral-ink: #5F5F64;
+  --naa-status-attention-ink: #8A5900;
+  --naa-status-danger-ink: #B02A24;
+  --naa-status-success-ink: #146C3A;
+
+  --naa-radius-sm: 10px;
+  --naa-radius-md: 14px;
+  --naa-radius-lg: 22px;
+  --naa-radius-pill: 999px;
+
+  --naa-space-1: 4px;
+  --naa-space-2: 8px;
+  --naa-space-3: 12px;
+  --naa-space-4: 16px;
+  --naa-space-5: 24px;
+  --naa-space-6: 32px;
+  --naa-space-7: 40px;
+  --naa-space-8: 48px;
+  --naa-space-9: 64px;
+  --naa-space-10: 80px;
+
+  --naa-type-display: 40px;
+  --naa-type-heading: 28px;
+  --naa-type-title: 20px;
+  --naa-type-body: 14px;
+  --naa-type-small: 13px;
+  --naa-type-caption: 12.5px;
+
+  --naa-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+  --naa-font-mono: SFMono-Regular, "Cascadia Mono", "Cascadia Code", Consolas, "Microsoft YaHei UI", monospace;
+
+  --naa-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --naa-shadow-2: 0 12px 32px rgba(0, 0, 0, 0.10);
+
+  --naa-ribbon-h: 26px;
+  --naa-topbar-h: 58px;
+  --naa-sidebar-w: 248px;
+  --naa-sidebar-w-compact: 76px;
+  --naa-content-max: 1440px;
+
+  --naa-dur: 150ms;
+  --naa-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --naa-surface-canvas: #0B0B0D;
+  --naa-surface-raised: #1C1C1E;
+  --naa-surface-sunken: #2C2C2E;
+  --naa-surface-hover: #232326;
+  --naa-surface-selected: #14263B;
+  --naa-surface-overlay: rgba(0, 0, 0, 0.58);
+
+  --naa-ink-primary: #F5F5F7;
+  --naa-ink-secondary: #C7C7CC;
+  --naa-ink-tertiary: #A1A1A6;
+  --naa-ink-inverse: #0B0B0D;
+
+  --naa-line: rgba(255, 255, 255, 0.10);
+  --naa-line-strong: rgba(255, 255, 255, 0.18);
+
+  --naa-action: #0A84FF;
+  --naa-action-hover: #3B9BFF;
+  --naa-action-ink: #FFFFFF;
+  --naa-action-soft: rgba(10, 132, 255, 0.14);
+  --naa-focus: #0A84FF;
+
+  --naa-status-neutral: #8E8E93;
+  --naa-status-neutral-soft: rgba(142, 142, 147, 0.16);
+  --naa-status-attention: #FFB340;
+  --naa-status-attention-soft: rgba(255, 179, 64, 0.14);
+  --naa-status-danger: #FF6B66;
+  --naa-status-danger-soft: rgba(255, 107, 102, 0.14);
+  --naa-status-success-limited: #4CC38A;
+  --naa-status-success-soft: rgba(76, 195, 138, 0.13);
+
+  --naa-action-text: #6CB6FF;
+  --naa-status-neutral-ink: #C7C7CC;
+  --naa-status-attention-ink: #FFC66D;
+  --naa-status-danger-ink: #FF9A96;
+  --naa-status-success-ink: #6FD3A3;
+
+  --naa-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --naa-shadow-2: 0 16px 40px rgba(0, 0, 0, 0.55);
+}

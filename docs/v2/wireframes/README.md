@@ -22,4 +22,4 @@ noahsark/design/wireframes/
 └─ 15-system.md
 ```
 
-请从 [`../../design/wireframes/README.md`](../../design/wireframes/README.md) 开始阅读。本文件只作为路径指针，不复制线框内容，避免两份线框漂移。
+请从 [`../../../design/wireframes/README.md`](../../../design/wireframes/README.md) 开始阅读。本文件只作为路径指针，不复制线框内容，避免两份线框漂移。

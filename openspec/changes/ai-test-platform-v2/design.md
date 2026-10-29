@@ -1,15 +1,24 @@
 # Design: AI Test Platform v2
 
+## 规范同步说明（2026-10-28，P0-03）
+
+> 本设计以下旧口径已按已批准决策修正。最高事实源为 `.omo/drafts` 已审核正文与 [NoahsArk 平台交付总计划](../../../../.omo/plans/noahsark-platform-delivery.md)；逐项冲突、精确修改与验证见 [openspec 与 docs/v2 规范同步记录](../../../../docs/delivery/openspec-v2-sync.md)。
+>
+> - **PostgreSQL 是唯一正式数据库。** SQLite/SQLite WAL 已取代。
+> - **五轴判定 + 分离事实**取代单一终态；旧终态名只作历史别名。
+> - **离线续跑、占用保留、STOP-first 重连、释放/证据/判定分离、`cleanup_receipt` 边界**写入 “Execution lifecycle, offline continuation and release”。
+> - **C1–C7 与 81 项**只作历史门禁/任务账本，映射见下文与 `tasks.md`。
+
 ## Context and boundaries
 
-NoahsArk is the canonical state holder and execution gateway. NoahsArk is a new codebase in `https://github.com/zjashanda/NoahsArk`; it does not reuse legacy platform UI, templates, database schema, execution adapters or fake-run paths. The intelligent plane (lead/planner/writers/reviewers) produces typed candidates and effects; the deterministic plane owns workflow, permissions, leases, dispatch, lstest, evidence, verdict, completion and archive. There is one workflow truth, not a second state machine. The design uses a fresh Flask + Jinja2 + vanilla ES modules + SSE + SQLite WAL implementation.
+NoahsArk is the canonical state holder and execution gateway. NoahsArk is a new codebase in `https://github.com/zjashanda/NoahsArk`; it does not reuse legacy platform UI, templates, database schema, execution adapters or fake-run paths. The intelligent plane (lead/planner/writers/reviewers) produces typed candidates and effects; the deterministic plane owns workflow, permissions, leases, dispatch, lstest, evidence, verdict, completion and archive. There is one workflow truth, not a second state machine. The design uses a fresh Flask + Jinja2 + vanilla ES modules + SSE + **PostgreSQL** implementation (历史/已取代 2026-10-28：原文 SQLite WAL).
 
 ## Decisions D1–D13
 
 | ID | Decision | Consequence |
 |---|---|---|
 | D1 | New NoahsArk codebase; the legacy platform is a negative reference only. | Fresh UI, execution, schema and adapters; no fake-execution reuse. |
-| D2 | Flask + Jinja2 + vanilla ES modules + SSE + SQLite WAL. | No new SPA/build chain; migrations are additive and idempotent. |
+| D2 | Flask + Jinja2 + vanilla ES modules + SSE + **PostgreSQL**（历史/已取代 2026-10-28：原文 SQLite WAL）. | No new SPA/build chain; migrations are additive and idempotent. |
 | D3 | Two planes, one truth. | Agents propose; command facade alone mutates irreversible facts. |
 | D4 | Model binding is a versioned first-class object. | Resolve task→agent→global→compiled fallback and snapshot every run. |
 | D5 | Completion is a gate object, not a status string. | Terminal writes require a hashed eligible report. |
@@ -26,11 +35,29 @@ NoahsArk is the canonical state holder and execution gateway. NoahsArk is a new 
 
 ### Data and completion
 
-Every artifact carries `task_id`, `execution_id` where applicable, schema/version, provenance and hash. Terminal states are `PASS | FAIL | BLOCKED_HUMAN | CANCELLED | STOPPED | INFRA_ERROR`; `WAITING_HUMAN` is non-terminal and there is no `DONE`. Gates are C1 approved immutable plan, C2 real execution, C3 complete artifact manifest, C4 independent verdict, C5 evidence sufficiency, C6 knowledge write-back or explicit no-reusable-knowledge reason, and C7 reproducibility. PASS requires C1–C7; FAIL requires C1–C5 and C7, with C6 before archive. DB trigger/watchdog rejects terminal state without an eligible report.
+Every artifact carries `task_id`, `execution_id` where applicable, schema/version, provenance and hash. The current verdict model is **five axes plus separated facts**: `execution_status` (`NOT_STARTED/RUNNING/COMPLETED/ABORTED/SKIPPED`), `validity_status` (`VALID/INVALID/BLOCKED/UNKNOWN`), `business_verdict` (`PASS/FAIL/EXPECTED/WARN/NEEDS_REVIEW/NOT_EVALUATED`), `evidence_status` (`COMPLETE/INCOMPLETE/CONFLICTED/UNVERIFIED`), and `verification_status` (`PASS/FAIL/NOT_RUN`). Device occupancy (`OCCUPIED/RELEASING/RELEASED/QUARANTINED`) and communication (`ONLINE/OFFLINE/STALE`) are separate facts and MUST NOT be collapsed into one status. Formal PASS requires `execution_status=COMPLETED`, `validity_status=VALID`, `evidence_status=COMPLETE`, `business_verdict=PASS` and `verification_status=PASS`; a `RUNNING` or `NOT_STARTED` execution cannot be a formal PASS.
+
+The legacy terminal set `PASS | FAIL | BLOCKED_HUMAN | CANCELLED | STOPPED | INFRA_ERROR` is retained only as a report-compatibility alias (**历史/已取代 2026-10-28**); `WAITING_HUMAN` is non-terminal and there is no `DONE`. Legacy gates remain for traceability: C1 approved immutable plan, C2 real execution, C3 complete artifact manifest, C4 independent verdict, C5 evidence sufficiency, C6 knowledge write-back or explicit no-reusable-knowledge reason, and C7 reproducibility. They map to the five axes as follows.
+
+| Legacy gate | Primary five-axis / separated fact |
+|---|---|
+| C1 方案 | `validity_status` approval boundary |
+| C2 真实执行 | `execution_status=COMPLETED`, `run_mode=real`, device occupancy |
+| C3 产物清单 | `evidence_status` |
+| C4 独立判定 | `verification_status` |
+| C5 证据充分 | `evidence_status` |
+| C6 知识回写 | archive prerequisite; does not change the five-axis verdict |
+| C7 可复现 | toolchain/environment fact; does not replace the five axes |
+
+### Execution lifecycle, offline continuation and release
+
+Execution completion, device release, evidence completeness and final verdict are separate objects. Once a frozen run has started, communication loss, heartbeat expiry or lease expiry MUST NOT stop it: it continues offline, Linux marks communication `OFFLINE/STALE` while the device remains `OCCUPIED`, and the platform MUST NOT re-dispatch, replay or re-sample. On reconnect, the node processes pending STOP first, then uploads, dedupes and reconciles; stale epoch/lease/controller messages cannot change the current run.
+
+Device release requires confirmed local stop, safe cleanup and occupancy reconciliation; it does not wait for GB-scale log archive or the final verdict. A missing `cleanup_receipt` only blocks device-release confirmation and keeps the device `OCCUPIED`/`QUARANTINED`; it does **not** by itself make the whole evidence chain incomplete or force a business FAIL. Execution end, device release, evidence status and final verdict MUST be recorded independently.
 
 ### Model and toolchain
 
-`aitest.model_binding.v1` records binding id, task, role, source, primary/candidates, family/capabilities, catalog and health snapshots, revision, actor and reason. Transient provider failures advance candidates; permanent auth/model/budget failures emit `MODEL_BLOCKED`; panel diversity degradation is explicit. `config/toolchain.lock.json` records opencode, OMO, plugins, skills, Python, SQLite, lstest and platform commit/hash. `compat` maps tested ranges to smoke suites and drift fails closed for real execution.
+`aitest.model_binding.v1` records binding id, task, role, source, primary/candidates, family/capabilities, catalog and health snapshots, revision, actor and reason. Transient provider failures advance candidates; permanent auth/model/budget failures emit `MODEL_BLOCKED`; panel diversity degradation is explicit. `config/toolchain.lock.json` records opencode, OMO, plugins, skills, Python, **PostgreSQL** (历史/已取代 2026-10-28: SQLite), lstest and platform commit/hash. `compat` maps tested ranges to smoke suites and drift fails closed for real execution.
 
 ### Event and push
 
@@ -50,7 +77,7 @@ Session records contain CLI kind/version, native session/project id, model bindi
 
 ## Migration and rollback
 
-Use an additive idempotent migration runner with WAL, foreign keys and busy timeout. Back up before migration; legacy tables and routes remain. Enable `NOAHSARK_V2_ENABLED` and per-capability flags only after wave gates and sign-off. Rollback disables flags, stops new v2 writes, preserves evidence/events, restores from backup only when necessary, and leaves legacy execution untouched. Toolchain drift or failed compatibility smoke blocks real execution until acknowledged. No product code or database is changed by this specification change.
+Use an additive idempotent migration runner with PostgreSQL transactions, constraints and indexes (**历史/已取代 2026-10-28**: 原文 WAL/foreign keys/busy timeout). Back up before migration; legacy tables and routes remain. Enable `NOAHSARK_V2_ENABLED` and per-capability flags only after wave gates and sign-off. Rollback disables flags, stops new v2 writes, preserves evidence/events, restores from backup only when necessary, and leaves legacy execution untouched. Toolchain drift or failed compatibility smoke blocks real execution until acknowledged. No product code or database is changed by this specification change.
 
 ## Security
 

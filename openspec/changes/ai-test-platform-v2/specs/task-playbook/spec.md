@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Task playbook persistence
-The platform SHALL persist an idempotent playbook after every terminal task, including requirement, plan/case/oracle hashes, prerequisites, evidence requirements, outcome, failure modes and reuse tags.
+The platform SHALL persist an idempotent playbook after every terminal task (after the five-axis verdict and archive prerequisites), including requirement, plan/case/oracle hashes, prerequisites, evidence requirements, outcome, failure modes and reuse tags.
 
 #### Scenario: Terminal archive
 - **WHEN** archive runs for a terminal task

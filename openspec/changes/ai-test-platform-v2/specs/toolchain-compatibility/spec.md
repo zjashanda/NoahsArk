@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Locked toolchain compatibility
-The platform SHALL maintain one hashed lock for opencode, OMO, plugins, skills, Python, SQLite, lstest and platform commit, and SHALL run versioned smoke suites when drift or upgrade occurs.
+The platform SHALL maintain one hashed lock for opencode, OMO, plugins, skills, Python, PostgreSQL (历史/已取代 2026-10-28: SQLite), lstest and platform commit, and SHALL run versioned smoke suites when drift or upgrade occurs.
 
 #### Scenario: Drift detected
 - **WHEN** an installed component differs from the lock

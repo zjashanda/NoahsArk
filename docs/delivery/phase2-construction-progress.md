@@ -13,8 +13,8 @@
 | W1 | SQLAlchemy 2 模型、Alembic、确定性 seed | **DONE** | migration `3c118019b042`；`alembic check` clean；seed 两次计数一致；pytest 12 passed | 保持 |
 | W2 | 39 条只读 API、统一 envelope、display_id/UUID、五轴投影 | **DONE** | batch1 22 passed；batch2 37 passed；batch3 53 passed；batch3 curl 全 200 | 保持 |
 | W3 | 四类写接口：Intake 草稿、审批、STOP、释放 | **DONE** | 四个 POST 路由；`pytest` 79 passed；ruff clean；live curl 201 | 保持 |
-| W4 | UI `api.js` / `data-source.js` / `?api=1` / 角色头 / 回退 | **IN PROGRESS** | `api.js` 已落盘；后台任务进行中 | 接页面数据源，39/39 浏览器 QA |
-| W5 | pytest、ruff、OpenAPI、curl、截图、证据、进度 | **PENDING** | — | 汇总证据，更新计划与台账 |
+| W4 | UI `api.js` / `data-source.js` / `?api=1` / 角色头 / 回退 | **DONE** | API 模式 39/39、fixture 39/39、0 console error、contract 100/100、smoke 249/249 | 保持 |
+| W5 | pytest、ruff、OpenAPI、curl、截图、证据、进度 | **IN PROGRESS** | 开始汇总 | 证据目录与最终台账 |
 
 ## 2. W3 当前已知问题与处理
 

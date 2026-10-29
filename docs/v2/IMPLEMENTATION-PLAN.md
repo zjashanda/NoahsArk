@@ -1,10 +1,14 @@
 # NoahsArk — AI Test Platform v2 Decision-Complete Implementation Plan
 
-> Target file: `.omo/plans/ai-test-platform-v2.md`
-> Canonical repo: **NoahsArk** (`https://github.com/zjashanda/NoahsArk`, empty public repo, `main`); local workspace: `E:\aswxStation\tmpskill\0000\noahsark`.
+> Target file: `.omo/plans/ai-test-platform-v2.md`（历史路径；当前主计划为 `.omo/plans/noahsark-platform-delivery.md`）
+> Canonical repo: **NoahsArk** (`https://github.com/zjashanda/NoahsArk`, empty public repo, `main`); local workspace: `E:\aswxStation\tmpskill\0000\noahsark`（历史工作区记录，当前工作区为 `/home/bszheng/NoahsArk`）。
 > Product name: **NoahsArk**; logo concept: **an ark**.
 > Execution mode: one checkbox = one atomic work unit = one commit. No checkbox is "done" without its verification command and evidence.
-> Current gate: **finish solution + UI design first; no product implementation until the design is approved.**
+> Current gate: **历史闸门已取代（2026-10-28）**。当前只执行 [NoahsArk 平台交付总计划](../../.omo/plans/noahsark-platform-delivery.md) 的 Phase 0–6；本文件的 81 项复选框不是当前施工 WBS。
+
+## 规范同步说明（2026-10-28，P0-03）
+
+> **本文整体转为历史参考，不再是当前实施计划。** 当前执行主线是 [NoahsArk 平台交付总计划](../../.omo/plans/noahsark-platform-delivery.md)；真实施工 WBS 由 Phase 3 产出。本文已定点修正：SQLite → PostgreSQL（唯一正式数据库）；单一终态 → 五轴 + 执行/设备/证据/判定分离；租约/心跳过期不停止已启动冻结压测、不回收设备；缺 `cleanup_receipt` 仅阻断释放确认；81 项计数为历史。逐项修改与仍属历史的内容见 [openspec 与 docs/v2 规范同步记录](../delivery/openspec-v2-sync.md)。P0-03 不构成实现、测试、部署或验收通过。
 
 ---
 
@@ -69,10 +73,12 @@ NoahsArk is a new codebase. The legacy platform is not a dependency: no UI, rout
 - UI: build `src/noahsark/templates/console/` with shared macros and `src/noahsark/static/aitest/` ES modules. Use the NoahsArk Console design tokens in `docs/v2/UI-DESIGN.md`.
 - Backend: Flask blueprints. `server.py` is the application entry and must not grow: new routes live in `src/noahsark/aitest/platform/api.py`, registered by a thin blueprint include. CI enforces `server.py` growth <= 20 lines per change.
 
-### D2. Stack: Flask + Jinja2 + vanilla ES modules + SSE + SQLite WAL
+### D2. Stack: Flask + Jinja2 + vanilla ES modules + SSE + PostgreSQL
+
+> **规范同步（2026-10-28）**：原标题与正文的 “SQLite WAL” 已取代。PostgreSQL 是唯一正式数据库；SQLite 只可作为历史参考或只读分析副本，不是实施依赖。
 
 - No Node build step for the platform UI. `xterm` is bundled locally for intranet use.
-- DB: SQLite in WAL mode with `busy_timeout=5000`, `foreign_keys=ON`; new schema via an idempotent migration runner. PostgreSQL remains a later option, not a v2 dependency.
+- DB: PostgreSQL is the only formal database. New schema via an idempotent migration runner with transactions, constraints and indexes; migration is backup-before-apply and rollback-tested. PostgreSQL HA, replication and backup topology are frozen in the master plan Phase 2/3, not in this historical section.
 
 ### D3. Two planes, one truth
 - **Intelligent plane:** Lead agent, planner, case writer, script implementer, reviewers, roundtable. Produces typed candidate artifacts and `AgentEffect`s.
@@ -83,7 +89,7 @@ NoahsArk is a new codebase. The legacy platform is not a dependency: no UI, rout
 Resolution precedence: **task override → agent override → global default → compiled fallback chain**. Every resolution yields an immutable `ModelBinding` with source, candidates, catalog version, capability snapshot and health snapshot. Switching is applied at the next turn boundary by default; `interrupt` is explicit and only at a safe checkpoint. No process restart.
 
 ### D5. Completion is a gate object, not a status string
-`CompletionGate.evaluate(task)` produces a hashed report with gate-by-gate evidence references. A terminal state cannot be written without a valid report. `PASS` must additionally pass all business/evidence gates; `FAIL` must prove real execution and a firmware/requirement root cause; `BLOCKED_HUMAN` is non-terminal.
+`CompletionGate.evaluate(task)` produces a hashed report with gate-by-gate evidence references. A terminal state cannot be written without a valid report. `PASS` must additionally pass all business/evidence gates; `FAIL` must prove real execution and a firmware/requirement root cause. **历史标注（2026-10-28）**：旧单一终态口径及其 `BLOCKED_HUMAN is non-terminal` 说法已被五轴 + 执行/设备/证据/判定分离取代，仅作报告兼容别名；详见 5.1 节与 [规范同步记录](../delivery/openspec-v2-sync.md)。
 
 ### D6. Event-first integration
 Every meaningful transition appends to `platform_events` (monotonic `seq`, unique `idempotency_key`). Push, UI SSE, CLI watch, retrieval metrics and audit all consume this log. Delivery is at-least-once with consumer-side dedupe; push failure never blocks a task.
@@ -139,7 +145,21 @@ Tracks A–E run concurrently after P0. F starts when the first API contract per
 
 ### 5.1 Terminal states and completion gates
 
-**Terminal states (reuse the existing spec):** `PASS | FAIL | BLOCKED_HUMAN | CANCELLED | STOPPED | INFRA_ERROR`. `WAITING_HUMAN` is non-terminal. No `DONE`.
+**Historical terminal states (superseded 2026-10-28):** `PASS | FAIL | BLOCKED_HUMAN | CANCELLED | STOPPED | INFRA_ERROR`. `WAITING_HUMAN` is non-terminal. No `DONE`. These names remain only as report-compatibility aliases; they are **not** the current verdict model.
+
+**Current verdict model:** lstest five axes plus separated facts. A task does not have one all-purpose status.
+
+| Axis / fact | Values | Meaning |
+|---|---|---|
+| `execution_status` | `NOT_STARTED / RUNNING / COMPLETED / ABORTED / SKIPPED` | Whether the run executed; not a business result |
+| `validity_status` | `VALID / INVALID / BLOCKED / UNKNOWN` | Whether input/environment is valid |
+| `business_verdict` | `PASS / FAIL / EXPECTED / WARN / NEEDS_REVIEW / NOT_EVALUATED` | Business conclusion |
+| `evidence_status` | `COMPLETE / INCOMPLETE / CONFLICTED / UNVERIFIED` | Necessary evidence state; independent of device release |
+| `verification_status` | `PASS / FAIL / NOT_RUN` | Linux independent recomputation |
+| Device occupancy | `OCCUPIED / RELEASING / RELEASED / QUARANTINED` | Does not become `RELEASED` on heartbeat loss |
+| Communication | `ONLINE / OFFLINE / STALE` | `OFFLINE` never means the device is free |
+
+Formal PASS requires `execution_status=COMPLETED`, `validity_status=VALID`, `evidence_status=COMPLETE`, `business_verdict=PASS` and `verification_status=PASS`; a `RUNNING` or `NOT_STARTED` execution cannot be a formal PASS. C1–C7 below are completion/archive gates over these facts, not a replacement for the five axes.
 
 | Gate | Requirement | Binary evidence |
 |---|---|---|
@@ -238,7 +258,7 @@ timeout: default 30 min idle, auto-release + event
 
 ### 5.6 Toolchain lock
 
-Components: `opencode` (version, commit, binary sha256), `omo` (version, git sha, entry sha256, tool-contract sha256), each self-developed plugin (`id`, version, git sha, entry sha256), each platform-used skill (`id`, `SKILL.md` sha256, source repo/commit), Python, SQLite, `lstest` pin/tree sha, platform commit. `compat` block records minimum and last-tested versions.
+Components: `opencode` (version, commit, binary sha256), `omo` (version, git sha, entry sha256, tool-contract sha256), each self-developed plugin (`id`, version, git sha, entry sha256), each platform-used skill (`id`, `SKILL.md` sha256, source repo/commit), Python, PostgreSQL, `lstest` pin/tree sha, platform commit. `compat` block records minimum and last-tested versions. **规范同步（2026-10-28）**：原文 SQLite 条目已取代；PostgreSQL 是唯一正式数据库。
 
 ### 5.7 Agent registry and OpenSpec context
 
@@ -287,7 +307,7 @@ Rendered outputs: `.opencode/agent/<role>.md`, `opencode.json` agent entries, an
 - [ ] **P0-03 Migration runner and schema v1 (M)** — additive, idempotent, rollback-tested schema.
   - Depends: P0-02
   - Files: `src/noahsark/aitest/platform/migrations/0001_platform_core.py`, `db.py`, `tests/platform/test_migrations.py`
-  - Acceptance: tables created: `platform_events`, `platform_settings`, `model_bindings`, `model_switch_audit`, `agent_profiles`, `task_model_overrides`, `push_subscriptions`, `push_deliveries`, `push_dead_letters`, `kb_entries`, `kb_revisions`, `kb_links`, `kb_feedback`, `kb_fts`, `task_playbooks`, `task_retrievals`, `executor_sessions`, `takeover_sessions`, `takeover_events`, `toolchain_lock_runs`, `toolchain_smoke_runs`, `completion_reports`, `completion_gate_evidence`, `executor_receipts`; re-running is a no-op; WAL/foreign keys/busy timeout set; backup-before-migrate and rollback tested.
+  - Acceptance: tables created: `platform_events`, `platform_settings`, `model_bindings`, `model_switch_audit`, `agent_profiles`, `task_model_overrides`, `push_subscriptions`, `push_deliveries`, `push_dead_letters`, `kb_entries`, `kb_revisions`, `kb_links`, `kb_feedback`, `kb_fts`, `task_playbooks`, `task_retrievals`, `executor_sessions`, `takeover_sessions`, `takeover_events`, `toolchain_lock_runs`, `toolchain_smoke_runs`, `completion_reports`, `completion_gate_evidence`, `executor_receipts`; re-running is a no-op; PostgreSQL transactions, constraints and indexes applied（2026-10-28 修正：原 WAL/foreign keys/busy timeout 为 SQLite 口径，已取代）; backup-before-migrate and rollback tested.
   - Verify: `python -m pytest tests/platform/test_migrations.py -q`; `python -m noahsark.aitest.platform.db --check`
   - Size: M
 
@@ -806,7 +826,7 @@ Rendered outputs: `.opencode/agent/<role>.md`, `opencode.json` agent entries, an
 - [ ] **P8-01 Toolchain snapshot, compat matrix and drift detector (M)** — lock what exists today.
   - Depends: P1-01, P0-04
   - Files: `config/toolchain.lock.json`, `config/toolchain.compat.json`, `src/noahsark/aitest/platform/toolchain.py`, `scripts/toolchain_snapshot.py`, `scripts/toolchain_verify.py`, tests
-  - Acceptance: snapshots opencode version/commit/binary hash, OMO version/git sha/entry hash/tool-contract hash, every self-developed plugin, every platform-used skill (`SKILL.md` hash + source commit), Python/SQLite, lstest pin, platform commit; verify detects drift and fails closed for real execution; JSON schema valid; no secrets.
+  - Acceptance: snapshots opencode version/commit/binary hash, OMO version/git sha/entry hash/tool-contract hash, every self-developed plugin, every platform-used skill (`SKILL.md` hash + source commit), Python/PostgreSQL, lstest pin, platform commit; verify detects drift and fails closed for real execution; JSON schema valid; no secrets.
   - Verify: `python scripts/toolchain_snapshot.py --check`; `python -m pytest tests/platform/test_toolchain.py -q`
   - Size: M
 
@@ -882,7 +902,7 @@ Rendered outputs: `.opencode/agent/<role>.md`, `opencode.json` agent entries, an
 | Layer | Location | Rules |
 |---|---|---|
 | Contract/unit | `tests/platform/test_*.py` | Pure functions, schema validation, fake clock/DB; fast; every branch |
-| Integration | `tests/platform/test_api_*.py`, `test_ui_*.py` | Flask test client, sqlite temp DB, fake provider/node, RBAC roles |
+| Integration | `tests/platform/test_api_*.py`, `test_ui_*.py` | Flask test client, PostgreSQL test database（2026-10-28 修正：原 sqlite temp DB 已取代）, fake provider/node, RBAC roles |
 | Golden/fixture | `tests/platform/fixtures/` | Retrieval top-k, root-cause classification, plan schema, UI snapshots |
 | Real E2E | `tests/e2e/` | Real device, real serial/audio, real opencode; `-m real`; never in default CI |
 | Upgrade drill | `tests/e2e/test_upgrade_drill.py` | Staging copy + simulated versions |

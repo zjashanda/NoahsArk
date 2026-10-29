@@ -1,5 +1,7 @@
 # 流程图渲染产物
 
+> **历史说明（历史/已取代 2026-10-28，P0-03）**：本目录是旧方案 `SOLUTION.md` 第 5 节的渲染产物，保留用于追溯。图中的旧终态集合与门禁口径已被五轴判定 + 执行/设备/证据/最终判定分离取代；当前流程以 [NoahsArk 平台交付总计划](../../../.omo/plans/noahsark-platform-delivery.md) 和 [openspec 与 docs/v2 规范同步记录](../../delivery/openspec-v2-sync.md) 为准，Phase 1/3 将重绘。
+
 本目录保存 `../SOLUTION.md` 第 5 节两张 Mermaid 图的源文件与渲染产物。
 
 | 文件 | 内容 | 来源 | 尺寸 |

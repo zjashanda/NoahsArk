@@ -1,6 +1,6 @@
 # NoahsArk UI 评审记录 v2.0
 
-> 状态：设计交付完成，等待用户设计评审（P7-00）。
+> 状态：**历史评审记录（历史/已取代 2026-10-28）**。原“设计交付完成，等待用户设计评审（P7-00）”不再代表当前基线；Apple 风格新基线由 Phase 1 冻结。当前执行主线见 [NoahsArk 平台交付总计划](../../.omo/plans/noahsark-platform-delivery.md)，差异见 [openspec 与 docs/v2 规范同步记录](../delivery/openspec-v2-sync.md)。
 > Apple 风格对比版：[UI-DESIGN-APPLE.md](./UI-DESIGN-APPLE.md)（Quiet Instrument，独立原型）
 > 自动化验收：[ACCEPTANCE-REPORT.md](./ACCEPTANCE-REPORT.md)
 > 范围：`docs/v2/UI-DESIGN.md`、`assets/brand/ark-logo.svg`、`design/design-tokens.json`、`design/wireframes/`、`design/ui-prototype.html`。

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="NoahsArk">
+  <rect width="32" height="32" rx="8" fill="#F5F5F7"/>
+  <path d="M7 20c3.2-6.4 6.8-9.6 9-9.6 2.2 0 5.8 3.2 9 9.6" fill="none" stroke="#0071E3" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M7 24h18" fill="none" stroke="#1D1D1F" stroke-width="2.2" stroke-linecap="round" opacity=".55"/>
+</svg>

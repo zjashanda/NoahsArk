@@ -1,0 +1,11 @@
+{
+  "name": "noahsark-cloudline-candidate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fixture-first candidate UI for the NoahsArk console with an opt-in read-only control-plane API mode.",
+  "scripts": {
+    "check": "node checks/contract-check.mjs && node checks/smoke-check.mjs",
+    "serve": "node checks/serve.mjs"
+  }
+}

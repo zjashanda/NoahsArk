@@ -10,3 +10,7 @@ The platform SHALL append redacted, monotonic, idempotent events and deliver the
 #### Scenario: Completion notification
 - **WHEN** all completion gates and archive succeed
 - **THEN** exactly one `task.completed` event is emitted; blocked or stopped tasks never emit it.
+
+#### Scenario: Communication loss during a frozen run
+- **WHEN** a node heartbeat or lease expires while a frozen run is executing
+- **THEN** no `task.completed`, `task.failed` or device-release event is emitted from the loss alone; communication state becomes offline/stale and the device stays occupied.

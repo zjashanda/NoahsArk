@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="NoahsArk UI direction comparison prototype">
+    <title>NoahsArk · UI Direction Comparison</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./styles.css">
+    <style>
+      .compare{max-inline-size:1180px;margin:auto;padding:var(--s12) var(--s8)}
+      .compare__intro{max-inline-size:66ch;margin-block-end:var(--s12)}
+      .compare__intro p{color:var(--muted);font-size:1rem}
+      .direction-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s4)}
+      .direction-card{display:flex;flex-direction:column;min-block-size:340px;padding:var(--s6);border:1px solid var(--line);border-radius:var(--radius-card);background:var(--raised);transition:transform 140ms ease,background 140ms ease}
+      .direction-card:hover{transform:translateY(-2px);background:var(--subtle)}
+      .direction-card h2{margin-block:var(--s8) var(--s3)}
+      .direction-card p{color:var(--muted);margin:0}.direction-card ul{padding-inline-start:var(--s5);color:var(--muted);font-size:12px;line-height:1.8}.direction-card .button{margin-top:auto;width:max-content}
+      .compare__note{margin-top:var(--s8);padding-top:var(--s5);border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+      @media(max-width:767px){.compare{padding:var(--s10) var(--s5)}.direction-grid{grid-template-columns:1fr}.direction-card{min-block-size:260px}}
+      @media(prefers-reduced-motion:reduce){.direction-card{transition:none}}
+    </style>
+  </head>
+  <body>
+    <main class="compare">
+      <a class="wordmark" href="./index.html"><span>NA</span> NoahsArk</a>
+      <section class="compare__intro">
+        <p class="eyebrow">DRAFT · PROTOTYPE · DIRECTION COMPARISON</p>
+        <h1>Choose the information shape before the full interface.</h1>
+        <p>Each direction contains the same local fixture and the same two clickable views: Mission Control and Task Detail. Compare visual language and information layout only—these screens are not a production console or a UI freeze.</p>
+      </section>
+      <section class="direction-grid" aria-label="Prototype directions">
+        <article class="direction-card"><p class="eyebrow">A · Spacious command surface</p><h2>Cloudline</h2><p>Closest to Apple’s quiet editorial mode: a restrained sidebar, broad whitespace, and cards that leave room for high-consequence facts.</p><ul><li>Fixed left navigation</li><li>Low visual density</li><li>Gentle hierarchy</li></ul><a class="button button--primary" href="./cloudline.html">Open Cloudline</a></article>
+        <article class="direction-card"><p class="eyebrow">B · Instrument workspace</p><h2>Precision Desk</h2><p>A calm professional test instrument that makes compact scanning, aligned grid structure, and data comparison its primary visual language.</p><ul><li>Compact navigation rail</li><li>Dense but quiet data grid</li><li>Strong scan rhythm</li></ul><a class="button button--primary" href="./precision-desk.html">Open Precision Desk</a></article>
+        <article class="direction-card"><p class="eyebrow">C · Workflow canvas</p><h2>Focus Flow</h2><p>A spatially distinct top-navigation workspace with a primary decision canvas and contextual inspector kept in a separate, purposeful region.</p><ul><li>Top navigation</li><li>Primary workspace canvas</li><li>Contextual right inspector</li></ul><a class="button button--primary" href="./focus-flow.html">Open Focus Flow</a></article>
+      </section>
+      <p class="compare__note">Fixture labels intentionally read <strong>DRAFT · PROTOTYPE</strong>. Status examples preserve independent execution, validity, verdict, evidence, verification, connectivity, occupancy, permit, and release semantics.</p>
+    </main>
+  </body>
+</html>

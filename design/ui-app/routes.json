@@ -1,0 +1,280 @@
+{
+  "schema_version": "1.0",
+  "source": "docs/delivery/ui-information-architecture.md",
+  "server_authoritative": false,
+  "routes": [
+    {
+      "id": "MC-01",
+      "path": "/console",
+      "title": "Mission Control",
+      "area": "MC",
+      "family": "mission"
+    },
+    {
+      "id": "IN-01",
+      "path": "/console/intake",
+      "title": "Intake",
+      "area": "IN",
+      "family": "intake"
+    },
+    {
+      "id": "IN-02",
+      "path": "/console/intake/new",
+      "title": "New Intake Draft",
+      "area": "IN",
+      "family": "intake"
+    },
+    {
+      "id": "IN-03",
+      "path": "/console/intake/:draftId",
+      "title": "Intake Draft",
+      "area": "IN",
+      "family": "intake"
+    },
+    {
+      "id": "TK-01",
+      "path": "/console/tasks",
+      "title": "Tasks",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "TK-02",
+      "path": "/console/tasks/:taskId/overview",
+      "title": "Task Overview",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "TK-03",
+      "path": "/console/tasks/:taskId/revisions",
+      "title": "Task Revisions",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "TK-04",
+      "path": "/console/tasks/:taskId/plan",
+      "title": "Task Plan",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "TK-05",
+      "path": "/console/tasks/:taskId/runs",
+      "title": "Task Runs",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "TK-06",
+      "path": "/console/tasks/:taskId/evidence",
+      "title": "Task Evidence",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "TK-07",
+      "path": "/console/tasks/:taskId/verdict",
+      "title": "Task Verdict",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "TK-08",
+      "path": "/console/tasks/:taskId/live",
+      "title": "Task Live",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "TK-09",
+      "path": "/console/tasks/:taskId/knowledge",
+      "title": "Task Knowledge",
+      "area": "TK",
+      "family": "tasks"
+    },
+    {
+      "id": "RN-01",
+      "path": "/console/runs",
+      "title": "Runs",
+      "area": "RN",
+      "family": "runs"
+    },
+    {
+      "id": "RN-02",
+      "path": "/console/runs/:runId",
+      "title": "Run Detail",
+      "area": "RN",
+      "family": "runs"
+    },
+    {
+      "id": "RN-03",
+      "path": "/console/runs/:runId/attempts/:attemptId",
+      "title": "Run Attempt Detail",
+      "area": "RN",
+      "family": "runs"
+    },
+    {
+      "id": "EV-01",
+      "path": "/console/evidence",
+      "title": "Evidence",
+      "area": "EV",
+      "family": "evidence"
+    },
+    {
+      "id": "EV-02",
+      "path": "/console/evidence/:evidenceId",
+      "title": "Evidence Detail",
+      "area": "EV",
+      "family": "evidence"
+    },
+    {
+      "id": "EV-03",
+      "path": "/console/verdicts",
+      "title": "Verdicts",
+      "area": "EV",
+      "family": "evidence"
+    },
+    {
+      "id": "DV-01",
+      "path": "/console/devices",
+      "title": "Devices",
+      "area": "DV",
+      "family": "devices"
+    },
+    {
+      "id": "DV-02",
+      "path": "/console/devices/:deviceId",
+      "title": "Device Detail",
+      "area": "DV",
+      "family": "devices"
+    },
+    {
+      "id": "DV-03",
+      "path": "/console/nodes/:nodeId",
+      "title": "Node Detail",
+      "area": "DV",
+      "family": "devices"
+    },
+    {
+      "id": "RP-01",
+      "path": "/console/reports",
+      "title": "Reports",
+      "area": "RP",
+      "family": "reports"
+    },
+    {
+      "id": "RP-02",
+      "path": "/console/reports/:reportId",
+      "title": "Report Detail",
+      "area": "RP",
+      "family": "reports"
+    },
+    {
+      "id": "KN-01",
+      "path": "/console/knowledge",
+      "title": "Knowledge",
+      "area": "KN",
+      "family": "knowledge"
+    },
+    {
+      "id": "KN-02",
+      "path": "/console/knowledge/:knowledgeId",
+      "title": "Knowledge Detail",
+      "area": "KN",
+      "family": "knowledge"
+    },
+    {
+      "id": "KN-03",
+      "path": "/console/knowledge/candidates",
+      "title": "Knowledge Candidates",
+      "area": "KN",
+      "family": "knowledge"
+    },
+    {
+      "id": "RT-01",
+      "path": "/console/runtime/models",
+      "title": "Runtime Models",
+      "area": "RT",
+      "family": "runtime"
+    },
+    {
+      "id": "RT-02",
+      "path": "/console/runtime/toolchain",
+      "title": "Runtime Toolchain",
+      "area": "RT",
+      "family": "runtime"
+    },
+    {
+      "id": "AG-01",
+      "path": "/console/agents",
+      "title": "Agents",
+      "area": "AG",
+      "family": "agents"
+    },
+    {
+      "id": "AG-02",
+      "path": "/console/agents/:agentId",
+      "title": "Agent Detail",
+      "area": "AG",
+      "family": "agents"
+    },
+    {
+      "id": "AG-03",
+      "path": "/console/reviews",
+      "title": "Reviews",
+      "area": "AG",
+      "family": "agents"
+    },
+    {
+      "id": "AU-01",
+      "path": "/console/audit",
+      "title": "Audit",
+      "area": "AU",
+      "family": "audit"
+    },
+    {
+      "id": "AU-02",
+      "path": "/console/audit/:eventId",
+      "title": "Audit Event Detail",
+      "area": "AU",
+      "family": "audit"
+    },
+    {
+      "id": "AU-03",
+      "path": "/console/recovery",
+      "title": "Recovery",
+      "area": "AU",
+      "family": "audit"
+    },
+    {
+      "id": "ST-01",
+      "path": "/console/settings",
+      "title": "Settings",
+      "area": "ST",
+      "family": "settings"
+    },
+    {
+      "id": "ST-02",
+      "path": "/console/settings/access",
+      "title": "Access Settings",
+      "area": "ST",
+      "family": "settings"
+    },
+    {
+      "id": "ST-03",
+      "path": "/console/settings/notifications",
+      "title": "Notification Settings",
+      "area": "ST",
+      "family": "settings"
+    },
+    {
+      "id": "ST-04",
+      "path": "/console/settings/retention",
+      "title": "Retention Settings",
+      "area": "ST",
+      "family": "settings"
+    }
+  ]
+}

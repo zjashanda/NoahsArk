@@ -2,6 +2,22 @@
 
 Each checkbox is copied from the saved plan; dependencies are preserved. Product implementation is out of scope for P0-01.
 
+> **历史/已取代（2026-10-28，P0-03）**：本文件是 2026-10-26 计划的 81 项历史账本，**不是当前施工 WBS**，也不代表当前完整范围。当前执行主线是 [NoahsArk 平台交付总计划](../../../../.omo/plans/noahsark-platform-delivery.md) 的 Phase 0–6；真实施工 WBS 由总计划 Phase 3 产出。旧 Phase → 主计划映射、C1–C7 → 五轴映射见 [README.md](./README.md)。下列复选框保留用于追溯，勾选与否不构成实现、测试、部署或验收证据。
+
+## Legacy phase → master plan mapping
+
+| 旧 Phase | 当前主计划对应（覆盖关系，不是一一对应） |
+|---|---|
+| Phase 0 Foundation | 总计划 Phase 0（P0-04..P0-11）+ P5-01 |
+| Phase 1 Model Registry | 总计划 Phase 2 P2-01/P2-09 + Phase 5 P5-02/P5-10 |
+| Phase 2 Active Push | 总计划 Phase 2 P2-08 + Phase 5 P5-08/P5-10 |
+| Phase 3 Knowledge | 总计划 Phase 2 P2-01 + Phase 5 P5-05/P5-08 |
+| Phase 4 Planning/OpenSpec | 总计划 Phase 0 P0-04/P0-07 + Phase 2 P2-03 + Phase 5 P5-02 |
+| Phase 5 Completion/Verdict | 总计划 Phase 0 P0-06 + Phase 4 P4-06 + Phase 5 P5-05 |
+| Phase 6 Takeover | 总计划 Phase 2 P2-03/P2-04 + Phase 5 P5-08 |
+| Phase 7 UI | 总计划 Phase 1 P1-01..P1-08 + Phase 5 P5-08 |
+| Phase 8 Toolchain/E2E/Final | 总计划 Phase 3 P3-03/P3-05 + Phase 5 P5-11 + Phase 6 P6-01..P6-08 |
+
 ## Phase 0 — Foundation
 - [ ] P0-01 OpenSpec change and capability deltas (S) — Depends: none
 - [ ] P0-02 Repo layout, module boundaries and blueprint wiring (M) — Depends: P0-01
@@ -101,4 +117,4 @@ Each checkbox is copied from the saved plan; dependencies are preserved. Product
 - [ ] P8-09 Documentation and operator guide (S) — Depends: P8-04..P8-08
 - [ ] P8-10 Final verification wave (M) — Depends: all previous
 
-**Count:** 81 checkboxes (8+7+6+10+13+7+6+14+10).
+**Count:** 81 checkboxes (8+7+6+10+13+7+6+14+10). **历史/已取代（2026-10-28）**：该计数不是当前范围；当前范围与阶段见总计划 Phase 0–6。
