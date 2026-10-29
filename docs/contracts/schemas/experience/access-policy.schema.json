@@ -1,0 +1,557 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/contracts/experience/access-policy.schema.json",
+  "title": "NoahsArk Access Policy",
+  "description": "访问级别、角色、任务关系、资源规则和 UI 字段可见性契约。默认拒绝（fail-closed）：显式 DENY 优先于显式 ALLOW，未匹配、未知资源、未知角色均拒绝。报告默认为 SUMMARY_INDEX；原始音频/日志只允许任务授权角色读取；允许与拒绝都必须审计。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "policy_version",
+    "status",
+    "effective_from",
+    "supersedes",
+    "default_decision",
+    "default_report_access_level",
+    "fail_closed",
+    "roles",
+    "task_relationships",
+    "capabilities",
+    "rules",
+    "field_visibility",
+    "audit",
+    "evaluation",
+    "ui"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "x-ui-visibility": "ui-safe"
+    },
+    "policy_id": {
+      "$ref": "#/$defs/identifier",
+      "x-ui-visibility": "ui-safe"
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "x-ui-visibility": "ui-safe"
+    },
+    "status": {
+      "enum": ["DRAFT", "ACTIVE", "RETIRED"],
+      "x-ui-visibility": "ui-safe"
+    },
+    "effective_from": {
+      "$ref": "#/$defs/timestamp",
+      "x-ui-visibility": "ui-safe"
+    },
+    "supersedes": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ],
+      "x-ui-visibility": "ui-safe"
+    },
+    "default_decision": {
+      "const": "DENY",
+      "description": "无匹配规则时拒绝，不得默认放行。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "default_report_access_level": {
+      "const": "SUMMARY_INDEX",
+      "description": "报告默认只暴露摘要和证据索引元数据。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "fail_closed": {
+      "const": true,
+      "x-ui-visibility": "ui-safe"
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role_id", "display_name", "rank", "capabilities"],
+        "properties": {
+          "role_id": {
+            "enum": [
+              "OBSERVER",
+              "TERMINAL_OPERATOR",
+              "SESSION_MANAGER",
+              "SUPER_ADMIN",
+              "SYSTEM",
+              "NODE_AGENT",
+              "AGENT"
+            ],
+            "x-ui-visibility": "ui-safe"
+          },
+          "display_name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "rank": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "数值越大权限越高；不得用于替代显式规则求值。",
+            "x-ui-visibility": "ui-safe"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/capability" },
+            "uniqueItems": true,
+            "x-ui-visibility": "ui-safe"
+          }
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "task_relationships": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["relationship_id", "description"],
+        "properties": {
+          "relationship_id": {
+            "enum": [
+              "SUBMITTER",
+              "MEMBER",
+              "APPROVER",
+              "VIEWER",
+              "EVIDENCE_READER",
+              "NONE",
+              "ANY"
+            ],
+            "x-ui-visibility": "ui-safe"
+          },
+          "description": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "implies_capabilities": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/capability" },
+            "uniqueItems": true,
+            "x-ui-visibility": "ui-safe"
+          }
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/capability" },
+      "uniqueItems": true,
+      "description": "平台能力目录；角色与关系只能通过能力获得动作许可，不以 UI 隐藏代替服务端校验。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule_id",
+          "priority",
+          "effect",
+          "resource_class",
+          "required_any_roles",
+          "required_any_relationships",
+          "required_capabilities_all",
+          "required_capabilities_any",
+          "access_level",
+          "requires_explicit_grant",
+          "audited",
+          "conditions"
+        ],
+        "properties": {
+          "rule_id": { "$ref": "#/$defs/identifier" },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "同优先级先按 EXPLICIT_DENY 覆盖；规则不得因排序不确定而放行。"
+          },
+          "effect": {
+            "enum": ["ALLOW", "DENY"],
+            "x-ui-visibility": "ui-safe"
+          },
+          "resource_class": { "$ref": "#/$defs/resourceClass" },
+          "required_any_roles": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "OBSERVER",
+                "TERMINAL_OPERATOR",
+                "SESSION_MANAGER",
+                "SUPER_ADMIN",
+                "SYSTEM",
+                "NODE_AGENT",
+                "AGENT"
+              ]
+            },
+            "uniqueItems": true,
+            "x-ui-visibility": "ui-safe"
+          },
+          "required_any_relationships": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "SUBMITTER",
+                "MEMBER",
+                "APPROVER",
+                "VIEWER",
+                "EVIDENCE_READER",
+                "NONE",
+                "ANY"
+              ]
+            },
+            "uniqueItems": true,
+            "x-ui-visibility": "ui-safe"
+          },
+          "required_capabilities_all": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/capability" },
+            "uniqueItems": true,
+            "x-ui-visibility": "ui-safe"
+          },
+          "required_capabilities_any": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/capability" },
+            "uniqueItems": true,
+            "x-ui-visibility": "ui-safe"
+          },
+          "access_level": { "$ref": "#/$defs/accessLevel" },
+          "requires_explicit_grant": {
+            "type": "boolean",
+            "description": "true 表示必须在任务或系统层显式授予，不得仅凭角色或关系推断。",
+            "x-ui-visibility": "ui-safe"
+          },
+          "audited": { "const": true },
+          "conditions": {
+            "type": "array",
+            "items": { "type": "string", "maxLength": 300 },
+            "uniqueItems": true
+          }
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "field_visibility": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "object_type",
+          "ui_safe_fields",
+          "restricted_fields",
+          "server_only_fields",
+          "never_expose_fields"
+        ],
+        "properties": {
+          "object_type": {
+            "enum": [
+              "TASK_CARD",
+              "REPORT",
+              "KNOWLEDGE_CANDIDATE",
+              "KNOWLEDGE_ITEM",
+              "AUDIT_EVENT",
+              "ACCESS_POLICY"
+            ],
+            "x-ui-visibility": "ui-safe"
+          },
+          "ui_safe_fields": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "uniqueItems": true
+          },
+          "restricted_fields": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "uniqueItems": true
+          },
+          "server_only_fields": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "uniqueItems": true
+          },
+          "never_expose_fields": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+            "uniqueItems": true
+          }
+        }
+      },
+      "description": "每个对象类型的 UI 安全字段、受限字段、服务端专用字段和永不暴露字段。UI 不得接收服务端专用字段后再自行隐藏。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "access_decision_event_action",
+        "allow_audited",
+        "denial_audited",
+        "raw_access_audited",
+        "retention_class",
+        "denied_access_visible_to_requester"
+      ],
+      "properties": {
+        "access_decision_event_action": { "const": "ACCESS_DECISION" },
+        "allow_audited": { "const": true },
+        "denial_audited": { "const": true },
+        "raw_access_audited": { "const": true },
+        "retention_class": { "const": "AUDIT_LONG" },
+        "denied_access_visible_to_requester": { "type": "boolean" }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "precedence",
+        "deny_overrides_allow",
+        "fail_closed",
+        "unknown_resource",
+        "unknown_role",
+        "unknown_relationship",
+        "missing_policy",
+        "client_side_filtering_allowed"
+      ],
+      "description": "策略求值规则。任何未知或缺失输入都必须拒绝，不得猜测。",
+      "properties": {
+        "precedence": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "enum": ["EXPLICIT_DENY", "EXPLICIT_ALLOW", "DEFAULT_DENY"] },
+          "x-ui-visibility": "ui-safe"
+        },
+        "deny_overrides_allow": { "const": true },
+        "fail_closed": { "const": true },
+        "unknown_resource": { "const": "DENY" },
+        "unknown_role": { "const": "DENY" },
+        "unknown_relationship": { "const": "DENY" },
+        "missing_policy": { "const": "DENY" },
+        "client_side_filtering_allowed": {
+          "const": false,
+          "description": "服务端必须先裁剪字段再下发；客户端过滤不算访问控制。"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "permission_gate_reason_required",
+        "hide_forbidden_actions",
+        "show_access_denied_message",
+        "never_render_server_only",
+        "default_report_sections"
+      ],
+      "properties": {
+        "permission_gate_reason_required": { "const": true },
+        "hide_forbidden_actions": {
+          "const": false,
+          "description": "不可执行动作以 disabled + 原因展示，不隐藏页面本身。"
+        },
+        "show_access_denied_message": { "const": true },
+        "never_render_server_only": { "const": true },
+        "default_report_sections": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "summary",
+              "metrics",
+              "verdict_summary",
+              "evidence_index",
+              "blockers",
+              "residual_risks"
+            ]
+          },
+          "uniqueItems": true
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "evaluation": {
+          "properties": {
+            "precedence": {
+              "prefixItems": [
+                { "const": "EXPLICIT_DENY" },
+                { "const": "EXPLICIT_ALLOW" },
+                { "const": "DEFAULT_DENY" }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "field_visibility": {
+          "contains": {
+            "properties": { "object_type": { "const": "TASK_CARD" } },
+            "required": ["object_type"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "field_visibility": {
+          "contains": {
+            "properties": { "object_type": { "const": "REPORT" } },
+            "required": ["object_type"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "field_visibility": {
+          "contains": {
+            "properties": { "object_type": { "const": "KNOWLEDGE_CANDIDATE" } },
+            "required": ["object_type"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "field_visibility": {
+          "contains": {
+            "properties": { "object_type": { "const": "KNOWLEDGE_ITEM" } },
+            "required": ["object_type"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "field_visibility": {
+          "contains": {
+            "properties": { "object_type": { "const": "AUDIT_EVENT" } },
+            "required": ["object_type"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "field_visibility": {
+          "contains": {
+            "properties": { "object_type": { "const": "ACCESS_POLICY" } },
+            "required": ["object_type"]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "accessLevel": {
+      "enum": [
+        "PUBLIC_SUMMARY",
+        "SUMMARY_INDEX",
+        "TASK_AUTHORIZED",
+        "EVIDENCE_AUTHORIZED",
+        "ADMIN_ONLY",
+        "DENY"
+      ]
+    },
+    "resourceClass": {
+      "enum": [
+        "TASK_CARD",
+        "REPORT_SUMMARY",
+        "EVIDENCE_INDEX",
+        "RAW_AUDIO",
+        "RAW_LOG",
+        "EVIDENCE_FILE",
+        "KNOWLEDGE_CANDIDATE",
+        "KNOWLEDGE_ITEM",
+        "AUDIT_EVENT",
+        "AUDIT_EXPORT",
+        "SETTINGS",
+        "USER_ROLE",
+        "NODE_CONTROL",
+        "DEVICE_CONTROL"
+      ]
+    },
+    "capability": {
+      "enum": [
+        "VIEW_SUMMARY",
+        "VIEW_TASK_DETAIL",
+        "VIEW_EVIDENCE_INDEX",
+        "READ_RAW_EVIDENCE",
+        "SUBMIT_TASK",
+        "APPROVE_TASK",
+        "REQUEST_STOP",
+        "MANAGE_SESSION",
+        "REVIEW_KNOWLEDGE_CANDIDATE",
+        "MERGE_COMMON_KB",
+        "MERGE_TOOL_KB",
+        "PROMOTE_ANOMALY_KNOWLEDGE",
+        "MANAGE_SETTINGS",
+        "MANAGE_ROLES",
+        "VIEW_AUDIT",
+        "EXPORT_AUDIT",
+        "MANAGE_NODES",
+        "CONTROL_DEVICE",
+        "RUN_SMOKE",
+        "EXPORT_REPORT"
+      ]
+    }
+  },
+  "x-ui-field-policy": {
+    "authority": "authoritative-policy",
+    "ui_safe": [
+      "policy_id",
+      "policy_version",
+      "status",
+      "effective_from",
+      "default_decision",
+      "default_report_access_level",
+      "roles",
+      "task_relationships",
+      "capabilities",
+      "rules[rule_id,effect,resource_class,required_any_roles,required_any_relationships,required_capabilities_all,required_capabilities_any,access_level,requires_explicit_grant]",
+      "field_visibility",
+      "audit",
+      "evaluation",
+      "ui"
+    ],
+    "restricted": [
+      "rules[conditions]"
+    ],
+    "server_only": [
+      "supersedes",
+      "rules[priority]"
+    ],
+    "never_expose": [
+      "secrets",
+      "credentials",
+      "raw_audio",
+      "raw_log_text",
+      "pii",
+      "absolute_storage_paths"
+    ]
+  }
+}

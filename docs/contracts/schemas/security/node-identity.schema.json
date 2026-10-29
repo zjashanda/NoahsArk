@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schemas/security/node-identity.schema.json",
+  "title": "NoahsArk node identity document v1",
+  "description": "Control-plane -> node signed identity document carrying the node certificate, key history pointer, protocol parameters, capabilities and revocation state. The envelope key_id identifies the control-plane signing key; payload.key_id identifies the node key.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "message_type",
+    "sender_role",
+    "message_id",
+    "node_id",
+    "job_id",
+    "lease_id",
+    "epoch",
+    "nonce",
+    "issued_at",
+    "expires_at",
+    "payload_hash",
+    "signature",
+    "key_id",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "protocol_version": { "const": "noahsark.node/v1" },
+    "message_type": { "const": "node_identity" },
+    "sender_role": { "const": "control_plane" },
+    "message_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "node_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "job_id": { "type": "null" },
+    "lease_id": { "type": "null" },
+    "epoch": { "const": 0 },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$"
+    },
+    "issued_at": { "$ref": "#/$defs/timestamp" },
+    "expires_at": { "$ref": "#/$defs/timestamp" },
+    "payload_hash": { "$ref": "#/$defs/sha256" },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^cp-ed25519:[0-9a-f]{32}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity_document_version",
+        "node_id",
+        "identity_status",
+        "key_algorithm",
+        "key_id",
+        "public_key",
+        "key_generation",
+        "certificate",
+        "capabilities",
+        "protocol",
+        "revocation",
+        "issued_at"
+      ],
+      "properties": {
+        "identity_document_version": { "const": 1 },
+        "node_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "identity_status": {
+          "enum": ["pending", "active", "suspended", "revoked", "retired"]
+        },
+        "key_algorithm": { "const": "Ed25519" },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:[0-9a-f]{32}$"
+        },
+        "public_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{59}$"
+        },
+        "key_generation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "previous_key_id": {
+          "type": ["string", "null"],
+          "pattern": "^ed25519:[0-9a-f]{32}$"
+        },
+        "certificate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "serial_number",
+            "subject",
+            "issuer",
+            "not_before",
+            "not_after",
+            "certificate_der_b64u",
+            "certificate_sha256",
+            "chain_der_b64u"
+          ],
+          "properties": {
+            "serial_number": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{2,64}$"
+            },
+            "subject": { "type": "string", "minLength": 1, "maxLength": 512 },
+            "issuer": { "type": "string", "minLength": 1, "maxLength": 512 },
+            "not_before": { "$ref": "#/$defs/timestamp" },
+            "not_after": { "$ref": "#/$defs/timestamp" },
+            "certificate_der_b64u": {
+              "type": "string",
+              "minLength": 100,
+              "maxLength": 16384,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "certificate_sha256": { "$ref": "#/$defs/sha256" },
+            "chain_der_b64u": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 4,
+              "items": {
+                "type": "string",
+                "minLength": 100,
+                "maxLength": 16384,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              }
+            }
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["audio_capture", "audio_playback", "serial", "usb", "network", "display"],
+            "description": "Node capability identifier (C-04, 2026-10-29). Capability keywords are not endpoint identities and do not by themselves grant occupancy; network/display remain non-occupiable in V0.0.1 pending T-10."
+          }
+        },
+        "protocol": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "protocol_version",
+            "control_plane_endpoints",
+            "poll_timeout_seconds",
+            "heartbeat_interval_seconds",
+            "lease_duration_seconds",
+            "max_clock_skew_seconds",
+            "message_ttl_seconds",
+            "nonce_retention_seconds",
+            "max_control_message_bytes"
+          ],
+          "properties": {
+            "protocol_version": { "const": "noahsark.node/v1" },
+            "control_plane_endpoints": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "items": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://[^\\s]+$",
+                "maxLength": 512
+              }
+            },
+            "poll_timeout_seconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 50
+            },
+            "heartbeat_interval_seconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 60
+            },
+            "lease_duration_seconds": {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 300
+            },
+            "max_clock_skew_seconds": {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 180
+            },
+            "message_ttl_seconds": {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 600
+            },
+            "nonce_retention_seconds": {
+              "type": "integer",
+              "minimum": 600,
+              "maximum": 3600
+            },
+            "max_control_message_bytes": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 4194304
+            }
+          }
+        },
+        "revocation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["revoked_at", "revocation_reason", "compromise_time"],
+          "properties": {
+            "revoked_at": {
+              "type": ["string", "null"],
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+            },
+            "revocation_reason": {
+              "type": ["string", "null"],
+              "enum": [
+                null,
+                "key_compromise",
+                "cessation_of_operation",
+                "superseded",
+                "certificate_hold",
+                "affiliation_ended",
+                "policy_violation"
+              ]
+            },
+            "compromise_time": {
+              "type": ["string", "null"],
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+            }
+          }
+        },
+        "issued_at": { "$ref": "#/$defs/timestamp" }
+      }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

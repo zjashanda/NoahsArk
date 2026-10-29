@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schemas/security/lease.schema.json",
+  "title": "NoahsArk node lease message v1",
+  "description": "Control-plane -> node signed lease grant, renewal, release or revocation. epoch is the fencing token. Lease expiry does not imply the device is free.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "message_type",
+    "sender_role",
+    "message_id",
+    "node_id",
+    "job_id",
+    "lease_id",
+    "epoch",
+    "nonce",
+    "issued_at",
+    "expires_at",
+    "payload_hash",
+    "signature",
+    "key_id",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "protocol_version": { "const": "noahsark.node/v1" },
+    "message_type": { "const": "lease" },
+    "sender_role": { "const": "control_plane" },
+    "message_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "node_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "lease_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$"
+    },
+    "issued_at": { "$ref": "#/$defs/timestamp" },
+    "expires_at": { "$ref": "#/$defs/timestamp" },
+    "payload_hash": { "$ref": "#/$defs/sha256" },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^cp-ed25519:[0-9a-f]{32}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lease_id",
+        "node_id",
+        "device_id",
+        "endpoint_set",
+        "job_id",
+        "run_id",
+        "epoch",
+        "state",
+        "granted_at",
+        "expires_at",
+        "heartbeat_interval_seconds",
+        "lease_duration_seconds",
+        "previous_epoch",
+        "allowed_actions",
+        "cleanup_required",
+        "device_identity",
+        "constraints",
+        "reason_code"
+      ],
+      "properties": {
+        "lease_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "node_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "device_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "endpoint_set": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "description": "Endpoint identity set (C-04, 2026-10-29): elements are stable endpoint_<32hex> identifiers, never endpoint kinds. This is the identity component of the occupancy key; kinds are matched separately through endpoint_kind/capabilities.",
+          "items": {
+            "type": "string",
+            "pattern": "^endpoint_[0-9a-f]{32}$"
+          }
+        },
+        "job_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "state": {
+          "enum": ["granted", "renewed", "released", "expired", "revoked", "reclaimed"],
+          "description": "Wire lease transport state, not ownership expiry. Fixed receive-side mapping to domain Lease.state and occupancy_state is in security-node.md §19.2 (C-03, 2026-10-29). expired never means ownership expiry or release; out-of-table values must not change domain state."
+        },
+        "granted_at": { "$ref": "#/$defs/timestamp" },
+        "expires_at": { "$ref": "#/$defs/timestamp" },
+        "heartbeat_interval_seconds": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 60
+        },
+        "lease_duration_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 300
+        },
+        "previous_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "allowed_actions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["static_check", "smoke", "formal", "diagnostics", "cleanup"]
+          }
+        },
+        "cleanup_required": { "type": "boolean" },
+        "device_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["device_id", "model", "firmware", "endpoints"],
+          "properties": {
+            "device_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "model": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "firmware": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "endpoints": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["endpoint_id", "kind"],
+                "properties": {
+                  "endpoint_id": {
+                    "type": "string",
+                    "pattern": "^endpoint_[0-9a-f]{32}$"
+                  },
+                  "kind": {
+                    "enum": ["audio_input", "audio_output", "serial", "usb", "network", "display"],
+                    "description": "Wire endpoint kind (C-04, 2026-10-29). audio_input/audio_output are inbound aliases normalized 1:1 to domain audio_capture/audio_playback before domain write; writers must emit the domain vocabulary. network/display are capability identifiers, not occupiable kinds in V0.0.1 pending T-10."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exclusive", "max_duration_seconds"],
+          "properties": {
+            "exclusive": { "const": true },
+            "max_duration_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 604800
+            }
+          }
+        },
+        "reason_code": {
+          "enum": ["initial_grant", "renewal", "reallocation", "operator", "recovery", "drain", "revocation"]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

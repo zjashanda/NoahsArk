@@ -1,0 +1,951 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/contracts/experience/task-card.schema.json",
+  "title": "NoahsArk Task Card Projection",
+  "description": "独立于 lead 会话的持久任务进展投影。任务卡是派生只读投影，不是权威状态；所有写入必须来自 Linux 控制面的权威事件。总量不可知时 percent 必须为 null，不得编造百分比。通信状态、执行状态、设备占用和投影新鲜度是四个独立信号，不得合并。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "projection_kind",
+    "projection_version",
+    "task_id",
+    "revision_id",
+    "run_id",
+    "stage",
+    "run_state",
+    "status_display",
+    "gates",
+    "resources",
+    "blocker",
+    "progress",
+    "freshness",
+    "communication",
+    "last_authoritative_update",
+    "last_known_at",
+    "generated_at",
+    "access_level",
+    "ui"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "description": "契约版本，属于载荷的一部分；缺失或未知版本按 fail-closed 处理。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "projection_kind": {
+      "const": "task_card",
+      "x-ui-visibility": "ui-safe"
+    },
+    "projection_version": {
+      "const": "1",
+      "description": "投影构建版本；投影逻辑变更时递增，不改变权威字段语义。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "task_id": {
+      "$ref": "#/$defs/identifier",
+      "description": "长期任务身份。恢复会话不得产生新的 task_id。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "revision_id": {
+      "$ref": "#/$defs/identifier",
+      "description": "当前展示的不可变修订。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "run_id": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ],
+      "description": "当前运行尝试；尚未运行时为 null，不得用 null 表示“已完成”。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "task_title": {
+      "type": "string",
+      "maxLength": 200,
+      "x-ui-visibility": "ui-safe"
+    },
+    "task_category": {
+      "enum": ["voice_interaction", "other", "unknown"],
+      "x-ui-visibility": "ui-safe"
+    },
+    "project_id": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ],
+      "x-ui-visibility": "ui-safe"
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "label", "ordinal", "group", "entered_at"],
+      "description": "主生命周期阶段投影；结果判定轴不得折叠进 stage。",
+      "properties": {
+        "code": {
+          "enum": [
+            "DRAFT",
+            "REVIEW",
+            "FROZEN",
+            "APPROVED",
+            "STATIC",
+            "LEASED",
+            "SMOKE",
+            "FORMAL",
+            "VERIFYING",
+            "REPORTED",
+            "CLOSED",
+            "BLOCKED",
+            "STOPPED",
+            "INVALID",
+            "QUARANTINED",
+            "INFRA_ERROR",
+            "AWAITING_CORRECTION",
+            "UNKNOWN"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "面向用户的中文阶段名；UI 不得自行翻译 code。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "ordinal": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "阶段在正常流水线中的顺序；异常态沿用其所处的正常阶段序号，不新增伪造进度。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "group": {
+          "enum": [
+            "PREPARATION",
+            "APPROVAL",
+            "STATIC_CHECK",
+            "EXECUTION",
+            "VERIFICATION",
+            "DELIVERY",
+            "TERMINAL",
+            "UNKNOWN"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "entered_at": {
+          "$ref": "#/$defs/timestamp",
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "run_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "continuation_expected", "source"],
+      "description": "执行状态。通信离线不等于执行停止；已批准的离线续跑必须保持 RUNNING 或 STOPPING。",
+      "properties": {
+        "state": {
+          "enum": [
+            "NOT_STARTED",
+            "RUNNING",
+            "STOPPING",
+            "BLOCKED",
+            "STOPPED",
+            "COMPLETED",
+            "FAILED",
+            "UNKNOWN"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "continuation_expected": {
+          "type": "boolean",
+          "description": "为 true 表示已启动的冻结压测在通信中断期间仍预期继续，UI 不得显示“已停止/设备空闲”。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "source": {
+          "enum": [
+            "CONTROL_PLANE_EVENT",
+            "NODE_RECEIPT_VERIFIED",
+            "RECONCILIATION",
+            "UNKNOWN"
+          ],
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "status_display": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary_state", "label", "severity", "reason_code", "aria_text"],
+      "description": "供 UI 直接渲染的单一主状态标签。它是多个权威状态的呈现选择，不是新的权威状态。",
+      "properties": {
+        "primary_state": {
+          "enum": [
+            "RUNNING",
+            "BLOCKED",
+            "STOPPED",
+            "COMPLETED",
+            "NEEDS_REVIEW",
+            "OFFLINE",
+            "STALE",
+            "UNKNOWN"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "x-ui-visibility": "ui-safe"
+        },
+        "severity": {
+          "enum": ["info", "success", "warning", "critical", "neutral"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "x-ui-visibility": "ui-safe"
+        },
+        "aria_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "颜色之外的等价文本；颜色不得作为唯一状态载体。",
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_gate", "items", "summary"],
+      "properties": {
+        "current_gate": {
+          "anyOf": [
+            { "enum": ["G0", "G1", "G2", "G3", "G4", "G5", "G6", "G7"] },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["gate_id", "status", "decided_at", "evidence_ref_count"],
+            "properties": {
+              "gate_id": {
+                "enum": ["G0", "G1", "G2", "G3", "G4", "G5", "G6", "G7"],
+                "x-ui-visibility": "ui-safe"
+              },
+              "status": {
+                "enum": ["PASS", "FAIL", "PENDING", "BLOCKED", "NOT_APPLICABLE", "UNKNOWN"],
+                "x-ui-visibility": "ui-safe"
+              },
+              "decided_at": {
+                "anyOf": [
+                  { "$ref": "#/$defs/timestamp" },
+                  { "type": "null" }
+                ],
+                "x-ui-visibility": "ui-safe"
+              },
+              "evidence_ref_count": {
+                "type": "integer",
+                "minimum": 0,
+                "x-ui-visibility": "ui-safe"
+              },
+              "blocker_owner": {
+                "anyOf": [
+                  { "type": "string", "maxLength": 160 },
+                  { "type": "null" }
+                ],
+                "x-ui-visibility": "ui-safe"
+              }
+            }
+          },
+          "x-ui-visibility": "ui-safe"
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 200,
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node", "device", "endpoint_set", "occupancy_state"],
+      "description": "实际执行资源。必须显示实际节点与设备，而不是计划候选。",
+      "properties": {
+        "node": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["node_id", "display_name", "online_state", "actual"],
+          "properties": {
+            "node_id": {
+              "anyOf": [
+                { "$ref": "#/$defs/identifier" },
+                { "type": "null" }
+              ],
+              "x-ui-visibility": "ui-safe"
+            },
+            "display_name": {
+              "anyOf": [
+                { "type": "string", "maxLength": 120 },
+                { "type": "null" }
+              ],
+              "x-ui-visibility": "ui-safe"
+            },
+            "online_state": {
+              "enum": ["ONLINE", "OFFLINE", "DEGRADED", "UNKNOWN"],
+              "x-ui-visibility": "ui-safe"
+            },
+            "actual": {
+              "type": "boolean",
+              "description": "true 表示该节点已实际承接当前 run，不是计划或候选。",
+              "x-ui-visibility": "ui-safe"
+            }
+          }
+        },
+        "device": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "device_id",
+            "device_identity",
+            "display_name",
+            "pool_state",
+            "actual"
+          ],
+          "properties": {
+            "device_id": {
+              "anyOf": [
+                { "$ref": "#/$defs/identifier" },
+                { "type": "null" }
+              ],
+              "x-ui-visibility": "ui-safe"
+            },
+            "device_identity": {
+              "anyOf": [
+                { "type": "string", "minLength": 1, "maxLength": 160 },
+                { "type": "null" }
+              ],
+              "description": "设备身份（型号/序列号等脱敏标识）；不得包含凭据。",
+              "x-ui-visibility": "ui-safe"
+            },
+            "display_name": {
+              "anyOf": [
+                { "type": "string", "maxLength": 120 },
+                { "type": "null" }
+              ],
+              "x-ui-visibility": "ui-safe"
+            },
+            "pool_state": {
+              "enum": [
+                "READY",
+                "LEASED",
+                "DRAINING",
+                "QUARANTINED",
+                "OFFLINE",
+                "UNKNOWN"
+              ],
+              "x-ui-visibility": "ui-safe"
+            },
+            "actual": {
+              "type": "boolean",
+              "description": "true 表示该设备已实际绑定当前 run。",
+              "x-ui-visibility": "ui-safe"
+            }
+          }
+        },
+        "endpoint_set": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "maxItems": 32,
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "switch_reason": {
+          "anyOf": [
+            { "type": "string", "maxLength": 300 },
+            { "type": "null" }
+          ],
+          "description": "发生设备替代时记录原因；无替代时为 null。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "occupancy_state": {
+          "enum": ["OCCUPIED", "RESERVED", "FREE", "UNKNOWN"],
+          "description": "设备占用状态。不得由通信状态推断；通信离线时设备仍可能保持 OCCUPIED。",
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "blocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["is_blocked", "owner", "reason_code", "summary", "since", "awaiting_action"],
+      "properties": {
+        "is_blocked": {
+          "type": "boolean",
+          "x-ui-visibility": "ui-safe"
+        },
+        "owner": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["owner_type", "owner_id", "role", "display_name"],
+          "description": "阻塞责任方；必须能回答“卡在谁那里”。",
+          "properties": {
+            "owner_type": {
+              "enum": ["ROLE", "PERSON", "SUBMITTER", "APPROVER", "SYSTEM", "NONE"],
+              "x-ui-visibility": "ui-safe"
+            },
+            "owner_id": {
+              "anyOf": [
+                { "$ref": "#/$defs/identifier" },
+                { "type": "null" }
+              ],
+              "x-ui-visibility": "ui-safe"
+            },
+            "role": {
+              "enum": [
+                "OBSERVER",
+                "TERMINAL_OPERATOR",
+                "SESSION_MANAGER",
+                "SUPER_ADMIN",
+                "SYSTEM",
+                "NONE"
+              ],
+              "x-ui-visibility": "ui-safe"
+            },
+            "display_name": {
+              "anyOf": [
+                { "type": "string", "maxLength": 120 },
+                { "type": "null" }
+              ],
+              "x-ui-visibility": "ui-safe"
+            }
+          }
+        },
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "x-ui-visibility": "ui-safe"
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 300,
+          "x-ui-visibility": "ui-safe"
+        },
+        "since": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "awaiting_action": {
+          "type": "string",
+          "maxLength": 200,
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "progress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "percent",
+        "percent_label",
+        "denominator_kind",
+        "counts",
+        "unknowns",
+        "stale_markers"
+      ],
+      "description": "进度必须对应真实分母。mode=COUNTS 时才允许 percent；否则 percent 必须为 null。禁止用耗时、消息数、文件字节数或 token 消耗推算完成百分比。",
+      "properties": {
+        "mode": {
+          "enum": ["COUNTS", "QUALITATIVE", "INDETERMINATE"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "percent": {
+          "anyOf": [
+            { "type": "number", "minimum": 0, "maximum": 100 },
+            { "type": "null" }
+          ],
+          "description": "仅在 mode=COUNTS 且分母权威可知时存在；四舍五入到 0.1。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "percent_label": {
+          "anyOf": [
+            { "type": "string", "minLength": 1, "maxLength": 120 },
+            { "type": "null" }
+          ],
+          "description": "百分比语义标签，例如“已完成用例占比”；不得写成“任务完成度”。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "denominator_kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "APPROVED_CASE_COUNT",
+                "APPROVED_EVIDENCE_ITEM_COUNT",
+                "NONE"
+              ]
+            },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cases_total",
+            "cases_completed",
+            "cases_valid",
+            "cases_invalid",
+            "cases_blocked",
+            "evidence_items_expected",
+            "evidence_items_received",
+            "evidence_items_verified"
+          ],
+          "description": "未知计数必须为 null，不得用 0 冒充。",
+          "properties": {
+            "cases_total": { "$ref": "#/$defs/nullableCount" },
+            "cases_completed": { "$ref": "#/$defs/nullableCount" },
+            "cases_valid": { "$ref": "#/$defs/nullableCount" },
+            "cases_invalid": { "$ref": "#/$defs/nullableCount" },
+            "cases_blocked": { "$ref": "#/$defs/nullableCount" },
+            "evidence_items_expected": { "$ref": "#/$defs/nullableCount" },
+            "evidence_items_received": { "$ref": "#/$defs/nullableCount" },
+            "evidence_items_verified": { "$ref": "#/$defs/nullableCount" }
+          },
+          "x-ui-visibility": "ui-safe"
+        },
+        "unknowns": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "TOTAL_CASES",
+              "TOTAL_EVIDENCE_ITEMS",
+              "REMAINING_RUNTIME",
+              "FORMAL_SAMPLE_COUNT",
+              "DEVICE_QUEUE_POSITION",
+              "OTHER"
+            ]
+          },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "stale_markers": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 80 },
+          "description": "进度自身的陈旧原因，例如“最后一次同步早于阈值”。",
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "mode": { "const": "COUNTS" } },
+            "required": ["mode"]
+          },
+          "then": {
+            "properties": {
+              "percent": { "type": "number" },
+              "denominator_kind": {
+                "enum": ["APPROVED_CASE_COUNT", "APPROVED_EVIDENCE_ITEM_COUNT"]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "mode": { "enum": ["QUALITATIVE", "INDETERMINATE"] } },
+            "required": ["mode"]
+          },
+          "then": {
+            "properties": {
+              "percent": { "type": "null" },
+              "percent_label": { "type": "null" },
+              "denominator_kind": {
+                "anyOf": [{ "const": "NONE" }, { "type": "null" }]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "is_stale",
+        "last_projection_at",
+        "data_age_seconds",
+        "stale_after_seconds",
+        "stale_since",
+        "stale_reasons"
+      ],
+      "description": "投影新鲜度。阈值由服务端配置（P0-08）解析后下发；UI 不得自行计算阈值或静默忽略 stale。",
+      "properties": {
+        "is_stale": {
+          "type": "boolean",
+          "x-ui-visibility": "ui-safe"
+        },
+        "last_projection_at": {
+          "$ref": "#/$defs/timestamp",
+          "x-ui-visibility": "ui-safe"
+        },
+        "data_age_seconds": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "stale_after_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "服务端解析后的陈旧阈值，不是 UI 常量。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "stale_since": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "stale_reasons": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "NO_AUTHORITATIVE_UPDATE",
+              "EVENT_STREAM_INTERRUPTED",
+              "NODE_HEARTBEAT_MISSED",
+              "LEASE_CHECK_OVERDUE",
+              "PROJECTION_BUILD_FAILED",
+              "CLOCK_SKEW",
+              "UNKNOWN"
+            ]
+          },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "communication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "last_heartbeat_at",
+        "last_event_at",
+        "offline_continuation_expected",
+        "device_occupancy_held",
+        "notes"
+      ],
+      "description": "节点与 Linux 控制面的通信可见性。与执行状态、设备占用、投影新鲜度相互独立。",
+      "properties": {
+        "state": {
+          "enum": ["LIVE", "DEGRADED", "OFFLINE", "UNKNOWN"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "last_heartbeat_at": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "last_event_at": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "offline_continuation_expected": {
+          "type": "boolean",
+          "x-ui-visibility": "ui-safe"
+        },
+        "device_occupancy_held": {
+          "type": "boolean",
+          "x-ui-visibility": "ui-safe"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "面向用户的离线解释，例如“通信离线，执行可能继续，设备保持占用”。",
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "last_authoritative_update": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "source", "event_id", "sequence"],
+      "description": "最后一次权威状态变更。与 last_known_at 不同；UI 必须分别展示。",
+      "properties": {
+        "at": {
+          "$ref": "#/$defs/timestamp",
+          "x-ui-visibility": "ui-safe"
+        },
+        "source": {
+          "enum": [
+            "CONTROL_PLANE_EVENT",
+            "NODE_RECEIPT_VERIFIED",
+            "VERDICT_WRITE",
+            "LEASE_STATE",
+            "APPROVAL_RECORD",
+            "UNKNOWN"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "event_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "sequence": {
+          "anyOf": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "last_known_at": {
+      "$ref": "#/$defs/timestamp",
+      "description": "投影最后收到任何可信事实的时间，可包含已校验节点回执；不等于权威状态变更时间。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp",
+      "x-ui-visibility": "ui-safe"
+    },
+    "access_level": {
+      "$ref": "#/$defs/accessLevel",
+      "description": "本投影允许的最大展示级别；UI 必须按服务端返回级别渲染，不得提升。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_actions", "read_only", "display_notes"],
+      "properties": {
+        "allowed_actions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "OPEN_TASK",
+              "OPEN_REPORT",
+              "OPEN_EVIDENCE_INDEX",
+              "OPEN_KNOWLEDGE",
+              "REQUEST_STOP",
+              "ASK_LEAD",
+              "VIEW_AUDIT",
+              "NONE"
+            ]
+          },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "read_only": {
+          "type": "boolean",
+          "x-ui-visibility": "ui-safe"
+        },
+        "display_notes": {
+          "type": "string",
+          "maxLength": 300,
+          "x-ui-visibility": "ui-safe"
+        }
+      }
+    },
+    "server_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projection_build_id", "authority_cursor", "raw_snapshot_ref"],
+      "properties": {
+        "projection_build_id": { "$ref": "#/$defs/identifier" },
+        "authority_cursor": { "type": "string", "maxLength": 160 },
+        "raw_snapshot_ref": { "type": "string", "maxLength": 300 }
+      },
+      "description": "服务端内部投影构建元数据，UI 不得接收或渲染。",
+      "x-ui-visibility": "server-only"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "communication": {
+            "properties": { "state": { "const": "OFFLINE" } },
+            "required": ["state"]
+          },
+          "run_state": {
+            "properties": { "state": { "enum": ["RUNNING", "STOPPING"] } },
+            "required": ["state"]
+          }
+        },
+        "required": ["communication", "run_state"]
+      },
+      "then": {
+        "properties": {
+          "communication": {
+            "properties": {
+              "offline_continuation_expected": { "const": true },
+              "device_occupancy_held": { "const": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "resources": {
+            "properties": { "device": { "properties": { "actual": { "const": true } } } }
+          }
+        },
+        "required": ["resources"]
+      },
+      "then": {
+        "properties": {
+          "resources": {
+            "properties": {
+              "device": {
+                "properties": {
+                  "device_id": { "$ref": "#/$defs/identifier" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "blocker": {
+            "properties": { "is_blocked": { "const": true } },
+            "required": ["is_blocked"]
+          }
+        },
+        "required": ["blocker"]
+      },
+      "then": {
+        "properties": {
+          "blocker": {
+            "properties": {
+              "owner": {
+                "properties": {
+                  "owner_type": { "not": { "const": "NONE" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "freshness": {
+            "properties": { "is_stale": { "const": true } },
+            "required": ["is_stale"]
+          }
+        },
+        "required": ["freshness"]
+      },
+      "then": {
+        "properties": {
+          "freshness": {
+            "properties": {
+              "stale_reasons": { "minItems": 1 }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableCount": {
+      "anyOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "null" }
+      ]
+    },
+    "accessLevel": {
+      "enum": [
+        "PUBLIC_SUMMARY",
+        "SUMMARY_INDEX",
+        "TASK_AUTHORIZED",
+        "EVIDENCE_AUTHORIZED",
+        "ADMIN_ONLY",
+        "DENY"
+      ]
+    }
+  },
+  "x-ui-field-policy": {
+    "authority": "derived-projection",
+    "ui_safe": [
+      "schema_version",
+      "projection_kind",
+      "projection_version",
+      "task_id",
+      "revision_id",
+      "run_id",
+      "task_title",
+      "task_category",
+      "project_id",
+      "stage",
+      "run_state",
+      "status_display",
+      "gates",
+      "resources",
+      "blocker",
+      "progress",
+      "freshness",
+      "communication",
+      "last_authoritative_update",
+      "last_known_at",
+      "generated_at",
+      "access_level",
+      "ui"
+    ],
+    "server_only": [
+      "server_metadata",
+      "server_metadata.projection_build_id",
+      "server_metadata.authority_cursor",
+      "server_metadata.raw_snapshot_ref"
+    ],
+    "never_expose": [
+      "raw_audio",
+      "raw_log_text",
+      "secrets",
+      "credentials",
+      "pii",
+      "absolute_storage_paths"
+    ]
+  }
+}

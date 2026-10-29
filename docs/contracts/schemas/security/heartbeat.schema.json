@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schemas/security/heartbeat.schema.json",
+  "title": "NoahsArk node heartbeat message v1",
+  "description": "Node -> control-plane signed heartbeat. Carries liveness, lease renewal requests, resource/endpoint/session/clock/identity/spool facts. Never carries raw audio, full logs or free-form commands.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "message_type",
+    "sender_role",
+    "message_id",
+    "node_id",
+    "job_id",
+    "lease_id",
+    "epoch",
+    "nonce",
+    "issued_at",
+    "expires_at",
+    "payload_hash",
+    "signature",
+    "key_id",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "protocol_version": { "const": "noahsark.node/v1" },
+    "message_type": { "const": "heartbeat" },
+    "sender_role": { "const": "node" },
+    "message_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "node_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "job_id": { "type": "null" },
+    "lease_id": { "type": "null" },
+    "epoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$"
+    },
+    "issued_at": { "$ref": "#/$defs/timestamp" },
+    "expires_at": { "$ref": "#/$defs/timestamp" },
+    "payload_hash": { "$ref": "#/$defs/sha256" },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^ed25519:[0-9a-f]{32}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "boot_id",
+        "sequence",
+        "sent_at",
+        "agent_version",
+        "lstest_version",
+        "os_version",
+        "state",
+        "active_leases",
+        "resources",
+        "endpoints",
+        "interactive_session",
+        "clock",
+        "pending_stop_ack",
+        "identity",
+        "anomalies"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "boot_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "sent_at": { "$ref": "#/$defs/timestamp" },
+        "agent_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "lstest_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "os_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "state": {
+          "enum": ["online", "busy", "degraded", "draining", "quarantined"]
+        },
+        "active_leases": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "lease_id",
+              "job_id",
+              "epoch",
+              "state",
+              "started_at",
+              "progress_percent",
+              "last_action_at"
+            ],
+            "properties": {
+              "lease_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "job_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "epoch": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9223372036854775807
+              },
+              "state": { "enum": ["running", "stopping", "cleanup", "idle"] },
+              "started_at": { "$ref": "#/$defs/timestamp" },
+              "progress_percent": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "last_action_at": { "$ref": "#/$defs/timestamp" }
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cpu_percent", "memory_percent", "disk", "spool_pending_receipts", "spool_bytes"],
+          "properties": {
+            "cpu_percent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "memory_percent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "disk": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["volume", "free_bytes", "total_bytes", "pressure"],
+              "properties": {
+                "volume": {
+                  "type": "string",
+                  "pattern": "^[A-Z]:$"
+                },
+                "free_bytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "total_bytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "pressure": { "enum": ["normal", "warning", "critical"] }
+              }
+            },
+            "spool_pending_receipts": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "spool_bytes": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "endpoints": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["endpoint_id", "kind", "status", "last_checked_at"],
+            "properties": {
+              "endpoint_id": {
+                "type": "string",
+                "pattern": "^endpoint_[0-9a-f]{32}$"
+              },
+              "kind": {
+                "enum": ["audio_input", "audio_output", "serial", "usb", "network", "display"],
+                "description": "Wire endpoint kind (C-04, 2026-10-29). audio_input/audio_output are inbound aliases for domain audio_capture/audio_playback; normalize before domain write. network/display are capability identifiers, not occupiable kinds in V0.0.1 pending T-10."
+              },
+              "status": { "enum": ["available", "busy", "missing", "error"] },
+              "last_checked_at": { "$ref": "#/$defs/timestamp" }
+            }
+          }
+        },
+        "interactive_session": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["available", "session_type", "user_present", "audio_capture_capable"],
+          "properties": {
+            "available": { "type": "boolean" },
+            "session_type": { "enum": ["console", "rdp", "none"] },
+            "user_present": { "type": "boolean" },
+            "audio_capture_capable": { "type": "boolean" }
+          }
+        },
+        "clock": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["utc_now", "offset_ms", "source", "synchronized"],
+          "properties": {
+            "utc_now": { "$ref": "#/$defs/timestamp" },
+            "offset_ms": {
+              "type": "integer",
+              "minimum": -86400000,
+              "maximum": 86400000
+            },
+            "source": { "enum": ["w32time", "ntp", "ptp", "manual", "unknown"] },
+            "synchronized": { "type": "boolean" }
+          }
+        },
+        "pending_stop_ack": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^stop_[0-9a-f]{32}$"
+          }
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key_id", "key_generation", "certificate_not_after", "identity_status"],
+          "properties": {
+            "key_id": {
+              "type": "string",
+              "pattern": "^ed25519:[0-9a-f]{32}$"
+            },
+            "key_generation": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "certificate_not_after": { "$ref": "#/$defs/timestamp" },
+            "identity_status": {
+              "enum": ["active", "suspended", "revoked", "retired", "expiring", "renewal_required"]
+            }
+          }
+        },
+        "anomalies": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["unacknowledged_count", "highest_severity"],
+          "properties": {
+            "unacknowledged_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "highest_severity": {
+              "enum": ["none", "info", "warning", "error", "critical"]
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

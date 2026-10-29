@@ -1,0 +1,481 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schemas/security/job.schema.json",
+  "title": "NoahsArk node job message v1",
+  "description": "Control-plane -> node signed job. Describes only a closed action and immutable, digest-addressed artifacts. There is no command, argv, script, entrypoint or shell field; unknown additional properties are rejected.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "message_type",
+    "sender_role",
+    "message_id",
+    "node_id",
+    "job_id",
+    "lease_id",
+    "epoch",
+    "nonce",
+    "issued_at",
+    "expires_at",
+    "payload_hash",
+    "signature",
+    "key_id",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "protocol_version": {
+      "const": "noahsark.node/v1"
+    },
+    "message_type": {
+      "const": "job"
+    },
+    "sender_role": {
+      "const": "control_plane"
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "node_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "lease_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$"
+    },
+    "issued_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "payload_hash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^cp-ed25519:[0-9a-f]{32}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id",
+        "attempt",
+        "action",
+        "task_id",
+        "revision_id",
+        "run_id",
+        "mode",
+        "lease_id",
+        "epoch",
+        "idempotency_key",
+        "start_deadline",
+        "max_execution_seconds",
+        "execution_bundle",
+        "case_plan",
+        "device",
+        "environment",
+        "constraints",
+        "evidence_policy",
+        "stop_policy",
+        "command_catalog_version"
+      ],
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "action": {
+          "enum": [
+            "static_check",
+            "smoke",
+            "formal",
+            "diagnostics",
+            "cleanup"
+          ]
+        },
+        "task_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "mode": {
+          "enum": [
+            "static",
+            "smoke",
+            "formal",
+            "diagnostics",
+            "cleanup"
+          ]
+        },
+        "lease_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "start_deadline": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "max_execution_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 604800
+        },
+        "execution_bundle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "bundle_id",
+            "bundle_digest",
+            "schema_version",
+            "artifact_refs"
+          ],
+          "properties": {
+            "bundle_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "bundle_digest": {
+              "$ref": "#/$defs/sha256"
+            },
+            "schema_version": {
+              "const": "noahsark.execution-bundle/v1",
+              "description": "Bundle format identifier / reference namespace (R-01, 2026-10-29). It answers which envelope and artifact naming rules parse this reference handle. It is NOT the payload schema_version (domain execution-bundle.schema.json uses \"1.0\"). Never require equality between the two axes and never derive one from the other."
+            },
+            "artifact_refs": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 256,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "artifact_id",
+                  "kind",
+                  "digest",
+                  "size_bytes",
+                  "media_type",
+                  "required"
+                ],
+                "properties": {
+                  "artifact_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "kind": {
+                    "enum": [
+                      "script",
+                      "audio",
+                      "profile",
+                      "config",
+                      "case_plan",
+                      "oracle",
+                      "tool",
+                      "support_file"
+                    ]
+                  },
+                  "digest": {
+                    "$ref": "#/$defs/sha256"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1073741824
+                  },
+                  "media_type": {
+                    "enum": [
+                      "application/json",
+                      "application/octet-stream",
+                      "application/zip",
+                      "audio/wav",
+                      "text/plain",
+                      "text/csv"
+                    ]
+                  },
+                  "required": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "case_plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "case_plan_digest",
+            "case_ids",
+            "planned_case_count"
+          ],
+          "properties": {
+            "case_plan_digest": {
+              "$ref": "#/$defs/sha256"
+            },
+            "case_ids": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 10000,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              }
+            },
+            "planned_case_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            }
+          }
+        },
+        "device": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "device_id",
+            "endpoint_set"
+          ],
+          "properties": {
+            "device_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "endpoint_set": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^endpoint_[0-9a-f]{32}$"
+              }
+            }
+          }
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "os_family",
+            "session_requirement",
+            "require_interactive_audio",
+            "expected_lstest_version"
+          ],
+          "properties": {
+            "os_family": {
+              "const": "windows"
+            },
+            "session_requirement": {
+              "enum": [
+                "interactive_required",
+                "service_ok"
+              ]
+            },
+            "require_interactive_audio": {
+              "type": "boolean"
+            },
+            "expected_lstest_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "allowed_adapters",
+            "max_disk_bytes",
+            "network_access",
+            "allow_reboot",
+            "allow_firmware_flash",
+            "allow_power_control",
+            "allow_shell"
+          ],
+          "properties": {
+            "allowed_adapters": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": {
+                "const": "lstest"
+              }
+            },
+            "max_disk_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1099511627776
+            },
+            "network_access": {
+              "const": false
+            },
+            "allow_reboot": {
+              "const": false
+            },
+            "allow_firmware_flash": {
+              "const": false
+            },
+            "allow_power_control": {
+              "const": false
+            },
+            "allow_shell": {
+              "const": false
+            }
+          }
+        },
+        "evidence_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required_kinds",
+            "manifest_schema",
+            "retention_days",
+            "keep_large_logs_local"
+          ],
+          "properties": {
+            "required_kinds": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "tool_log",
+                  "serial_log",
+                  "results_csv",
+                  "cases_csv",
+                  "run_manifest",
+                  "audio_capture",
+                  "screenshot",
+                  "cleanup_receipt"
+                ]
+              }
+            },
+            "manifest_schema": {
+              "const": "noahsark.test-evidence/v1"
+            },
+            "retention_days": {
+              "const": 30
+            },
+            "keep_large_logs_local": {
+              "type": "boolean"
+            }
+          }
+        },
+        "stop_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "on_scope_change",
+            "on_lease_loss",
+            "on_explicit_revoke",
+            "on_safety_incident",
+            "on_clock_skew",
+            "local_stop_allowed"
+          ],
+          "properties": {
+            "on_scope_change": {
+              "const": "pause_at_safe_point"
+            },
+            "on_lease_loss": {
+              "const": "continue_started_job",
+              "description": "Lease renewal deadline expiry and communication loss (heartbeat unreachable / expires_at passed) never stop an already-started frozen run. v1 accepts only continue_started_job here."
+            },
+            "on_explicit_revoke": {
+              "const": "stop_safe",
+              "description": "Explicit lease revocation or device-ownership change by the control plane is a distinct reason and may safe-stop the job."
+            },
+            "on_safety_incident": {
+              "const": "stop_safe",
+              "description": "Explicit local/control-plane safety incident is a distinct reason and may safe-stop the job."
+            },
+            "on_clock_skew": {
+              "enum": [
+                "continue_started_job",
+                "stop_safe"
+              ]
+            },
+            "local_stop_allowed": {
+              "const": true
+            }
+          }
+        },
+        "command_catalog_version": {
+          "const": "v1"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

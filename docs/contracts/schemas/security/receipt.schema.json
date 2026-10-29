@@ -1,0 +1,615 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schemas/security/receipt.schema.json",
+  "title": "NoahsArk node receipt message v1",
+  "description": "Node -> control-plane signed receipt. The node reports facts only. verification_status is fixed to NOT_RUN; Linux independently verifies evidence and computes the final verdict. Old receipts remain verifiable through key_id history.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "message_type",
+    "sender_role",
+    "message_id",
+    "node_id",
+    "job_id",
+    "lease_id",
+    "epoch",
+    "nonce",
+    "issued_at",
+    "expires_at",
+    "payload_hash",
+    "signature",
+    "key_id",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "protocol_version": {
+      "const": "noahsark.node/v1"
+    },
+    "message_type": {
+      "const": "receipt"
+    },
+    "sender_role": {
+      "const": "node"
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "node_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "lease_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$"
+    },
+    "issued_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "payload_hash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^ed25519:[0-9a-f]{32}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "job_id",
+        "attempt",
+        "lease_id",
+        "epoch",
+        "sequence",
+        "status",
+        "started_at",
+        "finished_at",
+        "duration_ms",
+        "outcome",
+        "facts",
+        "error",
+        "evidence_manifest",
+        "cleanup_receipt",
+        "artifacts",
+        "log_query_result",
+        "idempotency_key",
+        "node_boot_id",
+        "node_restart_count"
+      ],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "job_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "lease_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "started",
+            "completed",
+            "failed",
+            "stopped",
+            "blocked",
+            "infra_error",
+            "cleanup_complete"
+          ]
+        },
+        "started_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outcome": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Node-observed facts only. Every field is prefixed node_observed_ so it cannot be mistaken for the Linux final verdict. used_for_decision is fixed false; the control plane must recompute all five axes from verified evidence.",
+          "required": [
+            "node_observed_execution_status",
+            "node_observed_validity_status",
+            "node_observed_business_verdict",
+            "node_observed_evidence_status",
+            "node_observed_verification_status",
+            "used_for_decision"
+          ],
+          "properties": {
+            "node_observed_execution_status": {
+              "enum": [
+                "NOT_STARTED",
+                "RUNNING",
+                "COMPLETED",
+                "ABORTED",
+                "SKIPPED"
+              ]
+            },
+            "node_observed_validity_status": {
+              "enum": [
+                "VALID",
+                "INVALID",
+                "BLOCKED",
+                "UNKNOWN"
+              ]
+            },
+            "node_observed_business_verdict": {
+              "enum": [
+                "PASS",
+                "FAIL",
+                "EXPECTED",
+                "WARN",
+                "NEEDS_REVIEW",
+                "NOT_EVALUATED"
+              ]
+            },
+            "node_observed_evidence_status": {
+              "enum": [
+                "COMPLETE",
+                "INCOMPLETE",
+                "CONFLICTED",
+                "UNVERIFIED"
+              ]
+            },
+            "node_observed_verification_status": {
+              "const": "NOT_RUN"
+            },
+            "used_for_decision": {
+              "const": false,
+              "description": "Schema-level guard: node observations never decide PASS/FAIL."
+            }
+          }
+        },
+        "facts": {
+          "type": "object",
+          "maxProperties": 256,
+          "additionalProperties": true
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "enum": [
+                "ACTION_NOT_ALLOWED",
+                "ARTIFACT_MISMATCH",
+                "BLOCKED_NO_INTERACTIVE_SESSION",
+                "DEVICE_BUSY",
+                "EPOCH_STALE",
+                "INFRA_ERROR",
+                "LEASE_NOT_ACTIVE",
+                "LOCAL_SAFE_STOP",
+                "SCHEMA_INVALID",
+                "TOOL_CRASH",
+                "UNKNOWN"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "details": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "maxProperties": 32,
+              "additionalProperties": true
+            }
+          }
+        },
+        "evidence_manifest": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "manifest_id",
+            "digest",
+            "schema_version",
+            "predicate_type",
+            "size_bytes",
+            "storage",
+            "relative_path"
+          ],
+          "properties": {
+            "manifest_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "digest": {
+              "$ref": "#/$defs/sha256"
+            },
+            "schema_version": {
+              "const": "1.0",
+              "description": "Payload schema version of the referenced evidence manifest. Must equal evidence/evidence-manifest.schema.json schema_version (1.0); unknown values are fail-closed."
+            },
+            "predicate_type": {
+              "const": "noahsark.test-evidence/v1",
+              "description": "Predicate kind and predicate version, independent of schema_version. The /v1 suffix versions the predicate vocabulary, not the manifest payload schema."
+            },
+            "size_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1073741824
+            },
+            "storage": {
+              "enum": [
+                "uploaded",
+                "spooled",
+                "local_only"
+              ]
+            },
+            "relative_path": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)[.][.](?:/|$))(?!.*//)(?!.*(?:^|/)[.](?:/|$))(?=.*[.](?:log|txt|json|jsonl|csv|xml)$)[A-Za-z0-9._/-]{1,512}$"
+            }
+          }
+        },
+        "cleanup_receipt": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "description": "Transport-side superset of the domain minimum release projection (R-02, 2026-10-29). Shared required fields and the cleanup_status vocabulary are byte-for-byte identical to domain/receipt.schema.json cleanup_receipt. Detailed operational fields (operational_detail) exist only here as a transport convenience and must be trimmed before domain write; domain explicitly rejects operational_detail via additionalProperties=false. The authoritative detailed cleanup receipt is evidence/cleanup-receipt.schema.json, referenced by cleanup_receipt_id. Never assume the two projections can be deserialized into each other; convert field by field and audit/drop unknown fields.",
+          "required": [
+            "cleanup_receipt_id",
+            "cleanup_status",
+            "local_stop_confirmed",
+            "safe_cleanup_done",
+            "occupancy_reconciled",
+            "completed_at"
+          ],
+          "properties": {
+            "cleanup_receipt_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "cleanup_status": {
+              "$ref": "#/$defs/cleanupStatus"
+            },
+            "local_stop_confirmed": {
+              "type": "boolean"
+            },
+            "safe_cleanup_done": {
+              "type": "boolean"
+            },
+            "occupancy_reconciled": {
+              "type": "boolean",
+              "description": "Control-plane reconciliation of device occupancy. False or missing receipt keeps the device held; it never makes the evidence set incomplete by itself."
+            },
+            "completed_at": {
+              "$ref": "#/$defs/timestamp"
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "operational_detail": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Optional operational detail. It never changes the authoritative release projection or the cleanup status vocabulary.",
+              "properties": {
+                "residual_processes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "disk_freed_bytes": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "actions": {
+                  "type": "array",
+                  "minItems": 0,
+                  "maxItems": 32,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "terminate_run_processes",
+                      "close_device_handles",
+                      "flush_logs",
+                      "release_endpoints",
+                      "remove_temp_workspace",
+                      "restore_audio_defaults",
+                      "restore_serial_state"
+                    ]
+                  }
+                },
+                "failure_code": {
+                  "type": "string",
+                  "maxLength": 100
+                }
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 512,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_id",
+              "kind",
+              "digest",
+              "size_bytes",
+              "storage",
+              "relative_path"
+            ],
+            "properties": {
+              "artifact_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "kind": {
+                "enum": [
+                  "tool_log",
+                  "serial_log",
+                  "results_csv",
+                  "cases_csv",
+                  "run_manifest",
+                  "audio_capture",
+                  "screenshot",
+                  "cleanup_receipt",
+                  "other"
+                ]
+              },
+              "digest": {
+                "$ref": "#/$defs/sha256"
+              },
+              "size_bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1073741824
+              },
+              "storage": {
+                "enum": [
+                  "uploaded",
+                  "spooled",
+                  "local_only"
+                ]
+              },
+              "relative_path": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)[.][.](?:/|$))(?!.*//)(?!.*(?:^|/)[.](?:/|$))(?=.*[.](?:log|txt|json|jsonl|csv|xml)$)[A-Za-z0-9._/-]{1,512}$"
+              }
+            }
+          }
+        },
+        "log_query_result": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "query_id",
+            "chunk_index",
+            "chunk_count",
+            "encoding",
+            "bytes_returned",
+            "lines_returned",
+            "truncated",
+            "redaction_applied",
+            "redaction_rules",
+            "content_b64u",
+            "content_sha256",
+            "source_file_sha256",
+            "next_cursor",
+            "audit_event_id"
+          ],
+          "properties": {
+            "query_id": {
+              "type": "string",
+              "pattern": "^lq_[0-9a-f]{32}$"
+            },
+            "chunk_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "chunk_count": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "encoding": {
+              "enum": [
+                "utf-8",
+                "utf-16le"
+              ]
+            },
+            "bytes_returned": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144
+            },
+            "lines_returned": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 50000
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "redaction_applied": {
+              "type": "boolean"
+            },
+            "redaction_rules": {
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "email",
+                  "ipv4",
+                  "ipv6",
+                  "windows_sid",
+                  "username",
+                  "hostname",
+                  "file_path",
+                  "token_like",
+                  "phone",
+                  "mac_address",
+                  "device_serial",
+                  "audio_filename",
+                  "long_numeric_id"
+                ]
+              }
+            },
+            "content_b64u": {
+              "type": "string",
+              "maxLength": 350000,
+              "pattern": "^[A-Za-z0-9_-]*$"
+            },
+            "content_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "source_file_sha256": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "next_cursor": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 256
+            },
+            "audit_event_id": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        },
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "node_boot_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "node_restart_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "cleanupStatus": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "completed_with_warnings",
+        "failed",
+        "not_required",
+        "unknown"
+      ],
+      "description": "Authoritative cleanup status vocabulary, identical to evidence/cleanup-receipt.schema.json $defs.cleanupStatus."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

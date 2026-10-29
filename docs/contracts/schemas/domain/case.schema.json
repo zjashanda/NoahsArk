@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.invalid/contracts/domain/case.schema.json",
+  "title": "NoahsArk Case",
+  "description": "A stable case identity with content that is versioned and frozen per revision. Same name does not mean same case. Any content change creates a new case_version. Contract version 1.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "case_id",
+    "task_id",
+    "name",
+    "case_version",
+    "content_digest",
+    "status",
+    "steps",
+    "required_inputs",
+    "validity_conditions",
+    "required_evidence",
+    "assertion_refs",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "case_id": {
+      "$ref": "#/$defs/uuid",
+      "description": "Stable case identity. Name is not identity."
+    },
+    "task_id": { "$ref": "#/$defs/uuid" },
+    "project_id": { "$ref": "#/$defs/uuid" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "case_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Increments on any content change; old versions are not overwritten."
+    },
+    "content_digest": { "$ref": "#/$defs/digest" },
+    "status": {
+      "type": "string",
+      "enum": ["ACTIVE", "SUPERSEDED", "RETIRED"]
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["step_index", "action", "input", "expected_observable_result"],
+        "properties": {
+          "step_index": { "type": "integer", "minimum": 0 },
+          "action": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "input": { "type": "string", "minLength": 1, "maxLength": 4000 },
+          "input_artifact_digest": { "$ref": "#/$defs/digest" },
+          "expected_observable_result": { "type": "string", "minLength": 1, "maxLength": 4000 }
+        }
+      }
+    },
+    "required_inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["input_id", "kind"],
+        "properties": {
+          "input_id": { "$ref": "#/$defs/uuid" },
+          "kind": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "digest": { "$ref": "#/$defs/digest" }
+        }
+      }
+    },
+    "validity_conditions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+      "description": "Conditions that must hold for the case to be VALID; otherwise INVALID."
+    },
+    "required_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "required"],
+        "properties": {
+          "kind": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "required": { "type": "boolean" }
+        }
+      }
+    },
+    "assertion_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["oracle_id", "oracle_version", "digest"],
+        "properties": {
+          "oracle_id": { "$ref": "#/$defs/uuid" },
+          "oracle_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "digest": { "$ref": "#/$defs/digest" }
+        }
+      }
+    },
+    "frozen_by_revision_id": { "$ref": "#/$defs/uuid" },
+    "supersedes_case_version": { "type": "integer", "minimum": 1 },
+    "superseded_by_case_version": { "type": "integer", "minimum": 2 },
+    "created_at": { "$ref": "#/$defs/timestamp" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "SUPERSEDED" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["superseded_by_case_version"] }
+    },
+    {
+      "if": {
+        "properties": { "case_version": { "minimum": 2 } },
+        "required": ["case_version"]
+      },
+      "then": { "required": ["supersedes_case_version"] }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    }
+  }
+}

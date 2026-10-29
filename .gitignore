@@ -19,3 +19,16 @@ __pycache__/
 *.crt
 *.p12
 *.pfx
+docs/ssh.txt
+
+# backend local state
+.venv/
+apps/control_plane/.env
+
+# local-only secrets and tool state
+ssh.txt
+.playwright-mcp/
+
+*.egg-info/
+.pytest_cache/
+.ruff_cache/

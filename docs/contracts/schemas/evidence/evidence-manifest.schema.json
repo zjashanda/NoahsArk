@@ -1,0 +1,1119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.noahsark.local/evidence/evidence-manifest.schema.json",
+  "title": "NoahsArk Evidence Manifest v1",
+  "description": "Run-level evidence manifest binding task, revision, run, node, device, lease, cases, evidence items, denominators, anomalies, cleanup receipt and Linux verification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "predicate_type",
+    "manifest_id",
+    "task_id",
+    "revision_id",
+    "run_id",
+    "mode",
+    "acceptance_level",
+    "test_level",
+    "node_id",
+    "device_identity",
+    "timebase",
+    "cases",
+    "evidence_items",
+    "required_evidence",
+    "completeness",
+    "denominators",
+    "redaction",
+    "created_at",
+    "created_by"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "predicate_type": {
+      "const": "noahsark.test-evidence/v1"
+    },
+    "manifest_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "format": "uuid"
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "revision_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "mode": {
+      "$ref": "#/$defs/mode"
+    },
+    "acceptance_level": {
+      "$ref": "#/$defs/acceptanceLevel"
+    },
+    "test_level": {
+      "$ref": "#/$defs/testLevel"
+    },
+    "node_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Null only for layers without a node (for example L0 documentation contracts).",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "device_identity": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/deviceIdentity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "lease_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "lease_epoch": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "endpoints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "bundle": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/bundleRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "approval": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/approvalRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "timebase": {
+      "$ref": "#/$defs/timebase"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/caseEntry"
+      },
+      "minItems": 1
+    },
+    "evidence_items": {
+      "type": "array",
+      "items": {
+        "$ref": "evidence-item.schema.json"
+      },
+      "default": []
+    },
+    "required_evidence": {
+      "$ref": "#/$defs/requiredEvidence"
+    },
+    "completeness": {
+      "$ref": "#/$defs/completeness"
+    },
+    "denominators": {
+      "$ref": "#/$defs/denominators"
+    },
+    "invalid_classification": {
+      "$ref": "#/$defs/invalidClassification"
+    },
+    "anomalies": {
+      "$ref": "#/$defs/anomalies"
+    },
+    "cleanup_receipt": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/receiptRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Required when the run performed device actions. Null is allowed only for no-device runs."
+    },
+    "node_receipt": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/nodeReceipt"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "linux_verification": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/verificationRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "archive": {
+      "$ref": "#/$defs/archive"
+    },
+    "redaction": {
+      "$ref": "#/$defs/redaction"
+    },
+    "manifest_digest": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/digest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Required when completeness.result is COMPLETE."
+    },
+    "supersedes_manifest_digest": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/digest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "signatures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/signature"
+      },
+      "default": []
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "completeness": {
+            "properties": {
+              "result": {
+                "const": "COMPLETE"
+              }
+            },
+            "required": [
+              "result"
+            ]
+          }
+        },
+        "required": [
+          "completeness"
+        ]
+      },
+      "then": {
+        "required": [
+          "manifest_digest"
+        ],
+        "properties": {
+          "manifest_digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "completeness": {
+            "properties": {
+              "required_missing": {
+                "maxItems": 0
+              },
+              "digest_failures": {
+                "maxItems": 0
+              },
+              "conflict_ids": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "smoke"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "denominators": {
+            "properties": {
+              "formal": {
+                "const": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "formal"
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "acceptance_level": {
+            "enum": [
+              "L4",
+              "L5"
+            ]
+          },
+          "test_level": {
+            "const": "T6"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "static",
+        "smoke",
+        "formal"
+      ],
+      "description": "Run mode is exactly static/smoke/formal (C-01, 2026-10-29). The legacy token static_check is not a mode value; it is only a Job.action / Receipt.job_kind. Read-side compatibility may recognize static_check as a read-only alias for static with an audited warning, but writers must never emit static_check here."
+    },
+    "acceptanceLevel": {
+      "type": "string",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    "testLevel": {
+      "type": "string",
+      "enum": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6"
+      ]
+    },
+    "evidenceClass": {
+      "type": "string",
+      "enum": [
+        "raw_audio",
+        "device_log",
+        "serial_log",
+        "screenshot",
+        "execution_log",
+        "manifest",
+        "receipt",
+        "anomaly_event",
+        "linux_log_read",
+        "human_note"
+      ]
+    },
+    "axisExecution": {
+      "type": "string",
+      "enum": [
+        "NOT_STARTED",
+        "RUNNING",
+        "COMPLETED",
+        "ABORTED",
+        "SKIPPED"
+      ]
+    },
+    "axisValidity": {
+      "type": "string",
+      "enum": [
+        "VALID",
+        "INVALID",
+        "BLOCKED",
+        "UNKNOWN"
+      ]
+    },
+    "axisBusiness": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "EXPECTED",
+        "WARN",
+        "NEEDS_REVIEW",
+        "NOT_EVALUATED"
+      ]
+    },
+    "axisEvidence": {
+      "type": "string",
+      "enum": [
+        "COMPLETE",
+        "INCOMPLETE",
+        "CONFLICTED",
+        "UNVERIFIED"
+      ]
+    },
+    "deviceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "device_id",
+        "endpoints"
+      ],
+      "properties": {
+        "device_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serial": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "firmware": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "bundleRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundle_id",
+        "digest"
+      ],
+      "properties": {
+        "bundle_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "approvalRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approval_id",
+        "scope_digest"
+      ],
+      "properties": {
+        "approval_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "scope_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "timebase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at",
+        "finished_at",
+        "clock_source"
+      ],
+      "properties": {
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "clock_source": {
+          "type": "string",
+          "enum": [
+            "node_monotonic",
+            "node_wall",
+            "linux_ntp",
+            "mixed",
+            "unknown"
+          ]
+        },
+        "max_drift_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "caseEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "case_version",
+        "attempt",
+        "execution_status",
+        "validity_status",
+        "business_verdict",
+        "evidence_status",
+        "required_evidence_ids",
+        "denominator_eligible"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "case_version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Case version is an integer >= 1 in every layer (C-06, 2026-10-29). It is a comparison/increment/join key. String forms are rejected in strict mode; only an explicit compatibility reader may accept canonical decimal strings and coerce them to integers with an audit warning."
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "execution_status": {
+          "$ref": "#/$defs/axisExecution"
+        },
+        "validity_status": {
+          "$ref": "#/$defs/axisValidity"
+        },
+        "business_verdict": {
+          "$ref": "#/$defs/axisBusiness"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/axisEvidence"
+        },
+        "required_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true
+        },
+        "observed_evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "denominator_eligible": {
+          "type": "boolean"
+        },
+        "failure_class": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Evidence-side projection of the authoritative domain failure_classification vocabulary (C-02, 2026-10-29; mapping table in evidence-verdict.md §15.1). null is exactly equivalent to omitting the field and to projection value none: there is no failure classification. needs-review has no domain enum value; it is expressed by business_verdict=NEEDS_REVIEW plus non-PASS verification_status. Out-of-table values are fail-closed to NEEDS_REVIEW and never count as valid-failure.",
+          "enum": [
+            "none",
+            "invalid-input",
+            "invalid-environment",
+            "invalid-evidence",
+            "blocked",
+            "stopped",
+            "infra-error",
+            "valid-failure",
+            "unsupported",
+            "needs-review",
+            null
+          ]
+        }
+      }
+    },
+    "requiredEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule_set_id",
+        "rule_set_digest",
+        "classes",
+        "evidence_ids"
+      ],
+      "properties": {
+        "rule_set_id": {
+          "type": "string"
+        },
+        "rule_set_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidenceClass"
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true
+        },
+        "missing_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "optional_missing_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "completeness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "result",
+        "required_total",
+        "required_present",
+        "required_verified",
+        "required_missing",
+        "optional_missing",
+        "digest_failures",
+        "conflict_ids"
+      ],
+      "properties": {
+        "result": {
+          "type": "string",
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "FAILED",
+            "UNVERIFIED"
+          ]
+        },
+        "required_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_present": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_verified": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "optional_missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "digest_failures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "conflict_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "denominators": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planned",
+        "executed",
+        "valid",
+        "invalid",
+        "blocked",
+        "stopped",
+        "infra_error",
+        "formal"
+      ],
+      "properties": {
+        "planned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "executed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "valid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invalid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stopped": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "infra_error": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "formal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "per_device": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "default": {}
+        },
+        "per_case": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "default": {}
+        }
+      }
+    },
+    "invalidClassification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "default": {}
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "case_id",
+              "reason"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "case_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+              "reason": {
+                "type": "string"
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "default": []
+              }
+            }
+          },
+          "default": []
+        }
+      }
+    },
+    "anomalies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blocking_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "non_blocking_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "anomaly_id",
+              "code",
+              "severity",
+              "blocking",
+              "disposition"
+            ],
+            "properties": {
+              "anomaly_id": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "info",
+                  "warning",
+                  "error",
+                  "critical"
+                ]
+              },
+              "blocking": {
+                "type": "boolean"
+              },
+              "disposition": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "explained",
+                  "waived",
+                  "resolved"
+                ]
+              },
+              "evidence_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "default": []
+              }
+            }
+          },
+          "default": []
+        }
+      }
+    },
+    "receiptRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "receipt_digest",
+        "cleanup_status"
+      ],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "receipt_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "cleanup_status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "completed_with_warnings",
+            "failed",
+            "not_required",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "nodeReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "receipt_digest",
+        "status"
+      ],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "receipt_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "received",
+            "started",
+            "completed",
+            "aborted",
+            "failed",
+            "unknown"
+          ]
+        },
+        "signed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "signature_key_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "verificationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verification_id",
+        "verification_digest",
+        "result"
+      ],
+      "properties": {
+        "verification_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "verification_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_RUN"
+          ]
+        }
+      }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "not_required",
+            "hot_only",
+            "pending",
+            "archived",
+            "archive_unavailable",
+            "deletion_blocked"
+          ]
+        },
+        "archive_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verified_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "verified_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "applied",
+        "redacted_paths"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string"
+        },
+        "applied": {
+          "type": "boolean"
+        },
+        "redacted_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signer",
+        "key_id",
+        "algorithm",
+        "signed_at",
+        "value"
+      ],
+      "properties": {
+        "signer": {
+          "type": "string"
+        },
+        "key_id": {
+          "type": "string"
+        },
+        "algorithm": {
+          "type": "string"
+        },
+        "signed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1078 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.noahsark.local/evidence/verdict.schema.json",
+  "title": "NoahsArk Five-Axis Verdict v1",
+  "description": "Five-axis verdict with a derived decision. Formal PASS is fail-closed and cannot be derived from Windows-reported status alone.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "verdict_id",
+    "task_id",
+    "revision_id",
+    "run_id",
+    "mode",
+    "acceptance_level",
+    "test_level",
+    "axes",
+    "decision",
+    "mode_outcome",
+    "failure_class",
+    "formal_pass",
+    "denominator",
+    "pass_preconditions",
+    "reasons",
+    "evidence_manifest",
+    "decided_by",
+    "decided_at",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "verdict_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "format": "uuid"
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "revision_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "mode": {
+      "$ref": "#/$defs/mode"
+    },
+    "acceptance_level": {
+      "$ref": "#/$defs/acceptanceLevel"
+    },
+    "test_level": {
+      "$ref": "#/$defs/testLevel"
+    },
+    "axes": {
+      "$ref": "#/$defs/axes"
+    },
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+    "mode_outcome": {
+      "$ref": "#/$defs/modeOutcome"
+    },
+    "failure_class": {
+      "$ref": "#/$defs/failureClass"
+    },
+    "formal_pass": {
+      "type": "boolean"
+    },
+    "case_results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/caseResult"
+      },
+      "default": []
+    },
+    "denominator": {
+      "$ref": "#/$defs/denominator"
+    },
+    "pass_preconditions": {
+      "$ref": "#/$defs/passPreconditions"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reason"
+      },
+      "minItems": 1
+    },
+    "anomalies": {
+      "$ref": "#/$defs/anomalies"
+    },
+    "evidence_manifest": {
+      "$ref": "#/$defs/manifestRef"
+    },
+    "verification": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/verificationRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "cleanup_receipt": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/receiptRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Informational only. Device release and cleanup receipt state must not be used to derive the verdict."
+    },
+    "node_reported_status": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/nodeReportedStatus"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "decided_by": {
+      "$ref": "#/$defs/decidedBy"
+    },
+    "decided_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "verdict_digest": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/digest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "supersedes_verdict_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "PASS"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "formal_pass": {
+            "const": true
+          },
+          "mode": {
+            "const": "formal"
+          },
+          "failure_class": {
+            "const": "none"
+          },
+          "axes": {
+            "properties": {
+              "execution_status": {
+                "const": "COMPLETED"
+              },
+              "validity_status": {
+                "const": "VALID"
+              },
+              "business_verdict": {
+                "const": "PASS"
+              },
+              "evidence_status": {
+                "const": "COMPLETE"
+              },
+              "verification_status": {
+                "const": "PASS"
+              }
+            }
+          },
+          "denominator": {
+            "properties": {
+              "eligible": {
+                "const": true
+              }
+            }
+          },
+          "verification": {
+            "type": "object",
+            "properties": {
+              "result": {
+                "const": "PASS"
+              }
+            },
+            "required": [
+              "result"
+            ]
+          },
+          "pass_preconditions": {
+            "properties": {
+              "approval_valid": {
+                "const": true
+              },
+              "boundary_frozen": {
+                "const": true
+              },
+              "mode_formal": {
+                "const": true
+              },
+              "execution_completed": {
+                "const": true
+              },
+              "sample_valid": {
+                "const": true
+              },
+              "business_pass": {
+                "const": true
+              },
+              "required_evidence_complete": {
+                "const": true
+              },
+              "digest_verified": {
+                "const": true
+              },
+              "linux_review_pass": {
+                "const": true
+              },
+              "no_blocking_anomaly": {
+                "const": true
+              },
+              "denominator_eligible": {
+                "const": true
+              }
+            }
+          }
+        },
+        "required": [
+          "formal_pass",
+          "axes",
+          "denominator",
+          "verification",
+          "pass_preconditions"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "not": {
+              "const": "PASS"
+            }
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "formal_pass": {
+            "const": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "not": {
+              "const": "formal"
+            }
+          }
+        },
+        "required": [
+          "mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "const": "NOT_APPLICABLE"
+          },
+          "formal_pass": {
+            "const": false
+          },
+          "denominator": {
+            "properties": {
+              "formal_denominator": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "failure_class": {
+            "const": "valid-failure"
+          }
+        },
+        "required": [
+          "failure_class"
+        ]
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "const": "FAIL"
+          },
+          "axes": {
+            "properties": {
+              "validity_status": {
+                "const": "VALID"
+              },
+              "business_verdict": {
+                "const": "FAIL"
+              },
+              "evidence_status": {
+                "const": "COMPLETE"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "failure_class": {
+            "const": "invalid-evidence"
+          }
+        },
+        "required": [
+          "failure_class"
+        ]
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "const": "BLOCKED"
+          },
+          "axes": {
+            "properties": {
+              "validity_status": {
+                "enum": [
+                  "VALID",
+                  "UNKNOWN"
+                ]
+              },
+              "evidence_status": {
+                "enum": [
+                  "INCOMPLETE",
+                  "CONFLICTED",
+                  "UNVERIFIED"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "failure_class": {
+            "const": "invalid-input"
+          }
+        },
+        "required": [
+          "failure_class"
+        ]
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "const": "INVALID"
+          },
+          "axes": {
+            "properties": {
+              "validity_status": {
+                "const": "INVALID"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "failure_class": {
+            "const": "stopped"
+          }
+        },
+        "required": [
+          "failure_class"
+        ]
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "const": "STOPPED"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "NEEDS_REVIEW"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_class": {
+            "const": "needs-review"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "FAIL"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_class": {
+            "const": "valid-failure"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "INVALID"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_class": {
+            "const": "invalid-input"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "STOPPED"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failure_class": {
+            "const": "stopped"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "PASS"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "mode_outcome": {
+            "const": "PASS"
+          },
+          "denominator": {
+            "properties": {
+              "formal_denominator": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "static",
+        "smoke",
+        "formal"
+      ],
+      "description": "Run mode is exactly static/smoke/formal (C-01, 2026-10-29). static_check is only a Job.action / Receipt.job_kind; it is never a verdict mode. Read-side compatibility may accept it as a read-only alias for static with an audited warning; writers emit static only."
+    },
+    "acceptanceLevel": {
+      "type": "string",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    "testLevel": {
+      "type": "string",
+      "enum": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6"
+      ]
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "INVALID",
+        "BLOCKED",
+        "STOPPED",
+        "NEEDS_REVIEW",
+        "NOT_EVALUATED",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "modeOutcome": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "BLOCKED",
+        "STOPPED",
+        "NOT_EVALUATED",
+        "NOT_APPLICABLE"
+      ],
+      "description": "Operational outcome for smoke/static runs. Never a formal PASS."
+    },
+    "failureClass": {
+      "type": "string",
+      "description": "Serialization projection of the authoritative domain failure_classification vocabulary (C-02, 2026-10-29; bidirectional table in evidence-verdict.md §15.1). none means no failure classification and corresponds to an omitted domain failure_classification. needs-review corresponds to business_verdict=NEEDS_REVIEW with non-PASS verification_status, not to a domain enum member. Unknown values fail closed to NEEDS_REVIEW and never enter the formal denominator as valid-failure.",
+      "enum": [
+        "none",
+        "invalid-input",
+        "invalid-environment",
+        "invalid-evidence",
+        "blocked",
+        "stopped",
+        "infra-error",
+        "valid-failure",
+        "unsupported",
+        "needs-review"
+      ]
+    },
+    "axes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_status",
+        "validity_status",
+        "business_verdict",
+        "evidence_status",
+        "verification_status"
+      ],
+      "properties": {
+        "execution_status": {
+          "type": "string",
+          "enum": [
+            "NOT_STARTED",
+            "RUNNING",
+            "COMPLETED",
+            "ABORTED",
+            "SKIPPED"
+          ]
+        },
+        "validity_status": {
+          "type": "string",
+          "enum": [
+            "VALID",
+            "INVALID",
+            "BLOCKED",
+            "UNKNOWN"
+          ]
+        },
+        "business_verdict": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXPECTED",
+            "WARN",
+            "NEEDS_REVIEW",
+            "NOT_EVALUATED"
+          ]
+        },
+        "evidence_status": {
+          "type": "string",
+          "enum": [
+            "COMPLETE",
+            "INCOMPLETE",
+            "CONFLICTED",
+            "UNVERIFIED"
+          ]
+        },
+        "verification_status": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_RUN"
+          ]
+        }
+      }
+    },
+    "caseResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "case_version",
+        "attempt",
+        "execution_status",
+        "validity_status",
+        "business_verdict",
+        "evidence_status",
+        "verification_status",
+        "failure_class",
+        "denominator_eligible",
+        "flaky_suspect"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+        "case_version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Case version is an integer >= 1 in every layer (C-06, 2026-10-29). verdict.cases[].case_version must equal the corresponding attempt.case_version as an integer; otherwise CASE_CONTENT_MISMATCH. String forms are strict-mode errors and may only be coerced by an explicit compatibility reader with an audit warning."
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "execution_status": {
+          "type": "string",
+          "enum": [
+            "NOT_STARTED",
+            "RUNNING",
+            "COMPLETED",
+            "ABORTED",
+            "SKIPPED"
+          ]
+        },
+        "validity_status": {
+          "type": "string",
+          "enum": [
+            "VALID",
+            "INVALID",
+            "BLOCKED",
+            "UNKNOWN"
+          ]
+        },
+        "business_verdict": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXPECTED",
+            "WARN",
+            "NEEDS_REVIEW",
+            "NOT_EVALUATED"
+          ]
+        },
+        "evidence_status": {
+          "type": "string",
+          "enum": [
+            "COMPLETE",
+            "INCOMPLETE",
+            "CONFLICTED",
+            "UNVERIFIED"
+          ]
+        },
+        "verification_status": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_RUN"
+          ]
+        },
+        "failure_class": {
+          "$ref": "#/$defs/failureClass"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "denominator_eligible": {
+          "type": "boolean"
+        },
+        "flaky_suspect": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "denominator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eligible",
+        "formal_denominator",
+        "exclusion_reason"
+      ],
+      "properties": {
+        "eligible": {
+          "type": "boolean"
+        },
+        "formal_denominator": {
+          "type": "boolean"
+        },
+        "exclusion_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "passPreconditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approval_valid",
+        "boundary_frozen",
+        "mode_formal",
+        "execution_completed",
+        "sample_valid",
+        "business_pass",
+        "required_evidence_complete",
+        "digest_verified",
+        "linux_review_pass",
+        "no_blocking_anomaly",
+        "denominator_eligible"
+      ],
+      "properties": {
+        "approval_valid": {
+          "type": "boolean"
+        },
+        "boundary_frozen": {
+          "type": "boolean"
+        },
+        "mode_formal": {
+          "type": "boolean"
+        },
+        "execution_completed": {
+          "type": "boolean"
+        },
+        "sample_valid": {
+          "type": "boolean"
+        },
+        "business_pass": {
+          "type": "boolean"
+        },
+        "required_evidence_complete": {
+          "type": "boolean"
+        },
+        "digest_verified": {
+          "type": "boolean"
+        },
+        "linux_review_pass": {
+          "type": "boolean"
+        },
+        "no_blocking_anomaly": {
+          "type": "boolean"
+        },
+        "denominator_eligible": {
+          "type": "boolean"
+        }
+      }
+    },
+    "reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "anomalies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blocking_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "non_blocking_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "uniqueItems": true,
+          "default": []
+        }
+      }
+    },
+    "manifestRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_id",
+        "manifest_digest"
+      ],
+      "properties": {
+        "manifest_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "manifest_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "verificationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verification_id",
+        "verification_digest",
+        "result"
+      ],
+      "properties": {
+        "verification_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "verification_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_RUN"
+          ]
+        }
+      }
+    },
+    "receiptRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "receipt_digest",
+        "cleanup_status"
+      ],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "receipt_digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "cleanup_status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "completed_with_warnings",
+            "failed",
+            "not_required",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "nodeReportedStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "used_for_decision"
+      ],
+      "properties": {
+        "execution_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "NOT_STARTED",
+            "RUNNING",
+            "COMPLETED",
+            "ABORTED",
+            "SKIPPED",
+            null
+          ]
+        },
+        "validity_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "VALID",
+            "INVALID",
+            "BLOCKED",
+            "UNKNOWN",
+            null
+          ]
+        },
+        "business_verdict": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXPECTED",
+            "WARN",
+            "NEEDS_REVIEW",
+            "NOT_EVALUATED",
+            null
+          ]
+        },
+        "evidence_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "COMPLETE",
+            "INCOMPLETE",
+            "CONFLICTED",
+            "UNVERIFIED",
+            null
+          ]
+        },
+        "reported_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "used_for_decision": {
+          "const": false,
+          "description": "Must always be false. Node-reported PASS is not a decision input."
+        }
+      }
+    },
+    "decidedBy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "identity",
+        "role"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "linux_verdict_service",
+            "linux_verifier",
+            "human"
+          ]
+        },
+        "identity": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

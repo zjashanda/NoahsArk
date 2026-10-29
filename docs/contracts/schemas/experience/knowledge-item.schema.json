@@ -1,0 +1,566 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/contracts/experience/knowledge-item.schema.json",
+  "title": "NoahsArk Knowledge Item",
+  "description": "已推广的知识条目。条目只能由经人工批准的候选生成，必须保留来源候选、审查、适用条件、版本和冲突/陈旧状态。条目被批准不等于永久正确；stale/disputed 必须显式展示，且不得自动改变已冻结执行包或判据。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "knowledge_id",
+    "version",
+    "status",
+    "item_type",
+    "title",
+    "summary",
+    "scope",
+    "applicability",
+    "source_provenance",
+    "promotion",
+    "review",
+    "staleness",
+    "conflict",
+    "lifecycle",
+    "access_level",
+    "ui"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "x-ui-visibility": "ui-safe"
+    },
+    "knowledge_id": {
+      "$ref": "#/$defs/identifier",
+      "x-ui-visibility": "ui-safe"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "条目内容版本；修订生成新版本，不原地覆盖历史版本。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "status": {
+      "enum": [
+        "APPROVED",
+        "CORROBORATED",
+        "DISPUTED",
+        "STALE",
+        "RETRACTED",
+        "SUPERSEDED",
+        "EXPIRED"
+      ],
+      "description": "条目生命周期状态。approved 不得被 stale/disputed 静默压过，排序必须可解释。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "item_type": {
+      "enum": ["COMMON_KB", "TOOL_KB", "ANOMALY_RULE", "EXPERIENCE", "REFERENCE"],
+      "x-ui-visibility": "ui-safe"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "x-ui-visibility": "ui-safe"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000,
+      "x-ui-visibility": "ui-safe"
+    },
+    "scope": {
+      "enum": ["CROSS_PROJECT", "PROJECT", "TOOL", "HARDWARE_MODEL", "UNKNOWN"],
+      "x-ui-visibility": "ui-safe"
+    },
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_ids",
+        "hardware_models",
+        "device_identities",
+        "firmware_versions",
+        "config_versions",
+        "lstest_versions",
+        "capabilities",
+        "conditions",
+        "exclusions"
+      ],
+      "description": "已审核知识进入新冻结执行包前，仍必须检查对当前任务的适用性；不自动套用。",
+      "properties": {
+        "project_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "hardware_models": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "uniqueItems": true
+        },
+        "device_identities": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "uniqueItems": true
+        },
+        "firmware_versions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "uniqueItems": true
+        },
+        "config_versions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "uniqueItems": true
+        },
+        "lstest_versions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "uniqueItems": true
+        },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "uniqueItems": true
+        },
+        "conditions": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 },
+          "maxItems": 64
+        },
+        "exclusions": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 },
+          "maxItems": 64
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "source_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_candidate_ids",
+        "source_task_ids",
+        "source_revision_ids",
+        "source_run_ids",
+        "source_evidence_ids",
+        "originating_projects",
+        "originating_devices"
+      ],
+      "description": "条目必须能回到原候选、任务、修订、运行、证据、项目和设备；无来源条目不得存在。",
+      "properties": {
+        "source_candidate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "source_task_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "source_revision_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "source_run_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "source_evidence_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "originating_projects": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "originating_devices": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "uniqueItems": true
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "automatic",
+        "promoted_by",
+        "promoted_at",
+        "promotion_event_id",
+        "approval_ids",
+        "required_permission",
+        "conflict_check",
+        "applicability_check"
+      ],
+      "properties": {
+        "automatic": { "const": false },
+        "promoted_by": { "$ref": "#/$defs/identifier" },
+        "promoted_at": { "$ref": "#/$defs/timestamp" },
+        "promotion_event_id": { "$ref": "#/$defs/identifier" },
+        "approval_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "required_permission": {
+          "enum": [
+            "KNOWLEDGE_MERGE_COMMON",
+            "KNOWLEDGE_MERGE_TOOL",
+            "KNOWLEDGE_PROMOTE_ANOMALY"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "conflict_check": { "const": true },
+        "applicability_check": { "const": true }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewer_ids", "last_reviewed_at", "review_due_at"],
+      "properties": {
+        "reviewer_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "last_reviewed_at": { "$ref": "#/$defs/timestamp" },
+        "review_due_at": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "staleness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "is_stale",
+        "reasons",
+        "last_validated_at",
+        "validated_against",
+        "stale_since"
+      ],
+      "description": "陈旧必须显式，不得隐藏。条目仍可阅读，但不得作为当前判据自动套用。",
+      "properties": {
+        "is_stale": { "type": "boolean", "x-ui-visibility": "ui-safe" },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "LSTEST_VERSION_DRIFT",
+              "FIRMWARE_VERSION_DRIFT",
+              "CONFIG_VERSION_DRIFT",
+              "TOOL_VERSION_DRIFT",
+              "REVIEW_OVERDUE",
+              "SOURCE_SUPERSEDED",
+              "CONFLICTING_EVIDENCE",
+              "UNKNOWN"
+            ]
+          },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "last_validated_at": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "validated_against": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lstest_version", "firmware_version", "config_version"],
+          "properties": {
+            "lstest_version": {
+              "anyOf": [{ "type": "string", "maxLength": 120 }, { "type": "null" }]
+            },
+            "firmware_version": {
+              "anyOf": [{ "type": "string", "maxLength": 120 }, { "type": "null" }]
+            },
+            "config_version": {
+              "anyOf": [{ "type": "string", "maxLength": 120 }, { "type": "null" }]
+            }
+          },
+          "x-ui-visibility": "ui-safe"
+        },
+        "stale_since": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["has_conflict", "conflicting_knowledge_ids", "resolution", "notes"],
+      "properties": {
+        "has_conflict": { "type": "boolean", "x-ui-visibility": "ui-safe" },
+        "conflicting_knowledge_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "resolution": {
+          "enum": ["UNRESOLVED", "PREFER_THIS", "PREFER_OTHER", "SUPERSEDED"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "notes": { "type": "string", "maxLength": 1000, "x-ui-visibility": "ui-safe" }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "effective_from",
+        "effective_to",
+        "supersedes",
+        "superseded_by",
+        "retracted_at",
+        "retraction_reason"
+      ],
+      "properties": {
+        "effective_from": { "$ref": "#/$defs/timestamp", "x-ui-visibility": "ui-safe" },
+        "effective_to": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "supersedes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "superseded_by": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "retracted_at": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "retraction_reason": {
+          "anyOf": [
+            { "type": "string", "maxLength": 1000 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "access_level": {
+      "$ref": "#/$defs/accessLevel",
+      "x-ui-visibility": "ui-safe"
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "can_apply_to_plan",
+        "requires_freshness_check",
+        "warning_badges",
+        "sort_weight"
+      ],
+      "properties": {
+        "can_apply_to_plan": {
+          "type": "boolean",
+          "description": "即使为 true，也只创建草案修订，仍需再次审批。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "requires_freshness_check": { "const": true },
+        "warning_badges": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "APPROVED",
+              "CORROBORATED",
+              "DISPUTED",
+              "STALE",
+              "RETRACTED",
+              "SUPERSEDED",
+              "EXPIRED"
+            ]
+          },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "sort_weight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "服务端计算的排序权重；stale/disputed 不得静默排在 approved 之前。",
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "enum": ["APPROVED", "CORROBORATED"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "promotion": {
+            "properties": { "approval_ids": { "minItems": 1 } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "RETRACTED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "lifecycle": {
+            "properties": {
+              "retracted_at": { "$ref": "#/$defs/timestamp" },
+              "retraction_reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "SUPERSEDED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "lifecycle": {
+            "properties": { "superseded_by": { "$ref": "#/$defs/identifier" } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "STALE" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "staleness": {
+            "properties": {
+              "is_stale": { "const": true },
+              "reasons": { "minItems": 1 }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "item_type": { "const": "ANOMALY_RULE" } },
+        "required": ["item_type"]
+      },
+      "then": {
+        "properties": {
+          "promotion": {
+            "properties": {
+              "required_permission": { "const": "KNOWLEDGE_PROMOTE_ANOMALY" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "accessLevel": {
+      "enum": [
+        "PUBLIC_SUMMARY",
+        "SUMMARY_INDEX",
+        "TASK_AUTHORIZED",
+        "EVIDENCE_AUTHORIZED",
+        "ADMIN_ONLY",
+        "DENY"
+      ]
+    }
+  },
+  "x-ui-field-policy": {
+    "authority": "authoritative-knowledge-item",
+    "ui_safe": [
+      "knowledge_id",
+      "version",
+      "status",
+      "item_type",
+      "title",
+      "summary",
+      "scope",
+      "applicability",
+      "source_provenance.source_candidate_ids",
+      "source_provenance.source_task_ids",
+      "promotion.required_permission",
+      "review.last_reviewed_at",
+      "review.review_due_at",
+      "staleness",
+      "conflict",
+      "lifecycle",
+      "access_level",
+      "ui"
+    ],
+    "restricted": [
+      "summary when source evidence is EVIDENCE_AUTHORIZED"
+    ],
+    "server_only": [
+      "promotion.promoted_by",
+      "promotion.promotion_event_id",
+      "review.reviewer_ids"
+    ],
+    "never_expose": [
+      "raw_audio",
+      "raw_log_text",
+      "secrets",
+      "credentials",
+      "pii",
+      "absolute_storage_paths"
+    ]
+  }
+}

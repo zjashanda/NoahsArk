@@ -1,0 +1,699 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.noahsark.local/evidence/device-occupancy.schema.json",
+  "title": "NoahsArk Device Occupancy v1",
+  "description": "Device occupancy and release record. Communication state is separate from occupancy; heartbeat loss never implies free.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "occupancy_id",
+    "device_identity",
+    "resource_key",
+    "state",
+    "occupancy_state",
+    "communication_state",
+    "lease",
+    "release",
+    "updated_at",
+    "source_event_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "occupancy_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "format": "uuid"
+    },
+    "device_identity": {
+      "$ref": "#/$defs/deviceIdentity"
+    },
+    "resource_key": {
+      "$ref": "#/$defs/resourceKey"
+    },
+    "state": {
+      "$ref": "#/$defs/occupancyState"
+    },
+    "occupancy_state": {
+      "$ref": "#/$defs/coarseOccupancyState",
+      "description": "Coarse projection aligned with P0-04 Lease/Device occupancy_state: IDLE / OCCUPIED / RELEASING."
+    },
+    "communication_state": {
+      "$ref": "#/$defs/communicationState"
+    },
+    "lease": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/lease"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "occupant": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/occupant"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "release": {
+      "$ref": "#/$defs/release"
+    },
+    "reconciliation": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/reconciliation"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "quarantine": {
+      "$ref": "#/$defs/quarantine"
+    },
+    "cleanliness": {
+      "$ref": "#/$defs/cleanliness"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_event_id": {
+      "type": "string"
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "free"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "occupant": {
+            "type": "null"
+          },
+          "release": {
+            "properties": {
+              "release_state": {
+                "enum": [
+                  "released",
+                  "not_applicable"
+                ]
+              }
+            }
+          },
+          "quarantine": {
+            "properties": {
+              "active": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "quarantined"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "release": {
+            "properties": {
+              "release_state": {
+                "const": "quarantined"
+              }
+            }
+          },
+          "quarantine": {
+            "properties": {
+              "active": {
+                "const": true
+              }
+            }
+          }
+        },
+        "required": [
+          "quarantine"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "release": {
+            "properties": {
+              "release_state": {
+                "const": "released"
+              }
+            },
+            "required": [
+              "release_state"
+            ]
+          }
+        },
+        "required": [
+          "release"
+        ]
+      },
+      "then": {
+        "properties": {
+          "state": {
+            "const": "free"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "free"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "occupancy_state": {
+            "const": "IDLE"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "draining"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "occupancy_state": {
+            "const": "RELEASING"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "reserved",
+              "leased",
+              "running",
+              "offline_held",
+              "held_pending_cleanup",
+              "held_pending_reconciliation",
+              "quarantined",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "occupancy_state": {
+            "const": "OCCUPIED"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "deviceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "device_id",
+        "endpoints"
+      ],
+      "properties": {
+        "device_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serial": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "firmware": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "resourceKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "device_id",
+        "endpoint_set"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "device_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "endpoint_set": {
+          "type": "array",
+          "description": "Endpoint identity set in the occupancy key (C-04, 2026-10-29). Elements are stable endpoint identifiers, never endpoint kinds; two endpoints of the same kind with different IDs are distinct occupancy resources.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "occupancyState": {
+      "type": "string",
+      "enum": [
+        "free",
+        "reserved",
+        "leased",
+        "running",
+        "offline_held",
+        "held_pending_cleanup",
+        "held_pending_reconciliation",
+        "draining",
+        "quarantined",
+        "unknown"
+      ]
+    },
+    "coarseOccupancyState": {
+      "type": "string",
+      "enum": ["IDLE", "OCCUPIED", "RELEASING"]
+    },
+    "communicationState": {
+      "type": "string",
+      "enum": [
+        "online",
+        "degraded",
+        "offline",
+        "unknown"
+      ]
+    },
+    "heartbeatState": {
+      "type": "string",
+      "enum": [
+        "alive",
+        "stale",
+        "lost",
+        "unknown"
+      ]
+    },
+    "lease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lease_id",
+        "epoch",
+        "heartbeat_state"
+      ],
+      "properties": {
+        "lease_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "epoch": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "task_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "revision_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "run_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "job_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "attempt": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "acquired_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "renewed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "heartbeat_state": {
+          "$ref": "#/$defs/heartbeatState"
+        }
+      }
+    },
+    "occupant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "revision_id",
+        "run_id",
+        "purpose"
+      ],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "revision_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "static_check",
+            "smoke",
+            "formal",
+            "diagnostics",
+            "recovery"
+          ]
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_state"
+      ],
+      "properties": {
+        "release_state": {
+          "type": "string",
+          "enum": [
+            "not_applicable",
+            "held",
+            "release_requested",
+            "released",
+            "denied",
+            "quarantined"
+          ]
+        },
+        "release_requested_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "release_confirmed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "confirmed_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cleanup_receipt_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "cleanup_receipt_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reconciliation_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "denial_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "result"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "completed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "run_position_verified": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "pending_stop_drained": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "evidence_backlog_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "passed",
+            "failed",
+            "not_required"
+          ]
+        }
+      }
+    },
+    "quarantine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active"
+      ],
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "since": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "failure_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "released_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "released_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "cleanliness": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "safe_stop_confirmed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "cleanup_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "completed",
+            "completed_with_warnings",
+            "failed",
+            "not_required",
+            "unknown",
+            null
+          ]
+        },
+        "endpoints_released": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "residual_risk": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

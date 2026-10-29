@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.invalid/contracts/domain/device.schema.json",
+  "title": "NoahsArk Device",
+  "description": "Device identity, capabilities, endpoints, health, pool state and occupancy. Communication state is separate from occupancy: an offline device may still be OCCUPIED. Contract version 1.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "device_id",
+    "node_id",
+    "identity",
+    "capabilities",
+    "endpoints",
+    "firmware_version",
+    "config_digest",
+    "adapter_version",
+    "project_scope",
+    "pool_state",
+    "health_state",
+    "communication_state",
+    "occupancy_state",
+    "provenance",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "device_id": { "$ref": "#/$defs/uuid" },
+    "node_id": { "$ref": "#/$defs/uuid" },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manufacturer", "model", "hardware_revision", "serial_number_masked", "identity_digest"],
+      "properties": {
+        "manufacturer": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "model": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "hardware_revision": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "serial_number_masked": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Masked/derived serial only; raw real serial numbers must not enter contract examples or logs."
+        },
+        "identity_digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 100 },
+      "uniqueItems": true
+    },
+    "endpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["endpoint_id", "kind", "binding", "available"],
+        "properties": {
+          "endpoint_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "kind": {
+            "type": "string",
+            "description": "endpoint_kind capability class (C-04, 2026-10-29). Domain vocabulary is authoritative; wire audio_input/audio_output are inbound aliases normalized to audio_capture/audio_playback before entering the domain. network/display remain node capability identifiers, not occupiable endpoint kinds in V0.0.1 until T-10 confirms real instances.",
+            "enum": ["audio_capture", "audio_playback", "serial", "usb", "gpio"]
+          },
+          "binding": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "available": { "type": "boolean" }
+        }
+      }
+    },
+    "firmware_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "config_digest": { "$ref": "#/$defs/digest" },
+    "adapter_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "project_scope": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/uuid" },
+      "uniqueItems": true
+    },
+    "pool_state": {
+      "type": "string",
+      "enum": ["DISCOVERED", "READY", "RESERVED", "ATTACHED", "DRAINING", "QUARANTINED", "OFFLINE", "RETIRED"],
+      "description": "Pool state is separate from health, communication and occupancy."
+    },
+    "health_state": {
+      "type": "string",
+      "enum": ["HEALTHY", "DEGRADED", "UNHEALTHY", "UNKNOWN"]
+    },
+    "communication_state": {
+      "type": "string",
+      "enum": ["ONLINE", "STALE", "OFFLINE"],
+      "description": "OFFLINE must never be mapped to IDLE."
+    },
+    "occupancy_state": {
+      "type": "string",
+      "enum": ["IDLE", "OCCUPIED", "RELEASING"]
+    },
+    "current_lease_id": { "$ref": "#/$defs/uuid" },
+    "equivalence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["equivalence_group_id", "conditions_digest", "verified_at", "verified_by"],
+      "properties": {
+        "equivalence_group_id": { "$ref": "#/$defs/uuid" },
+        "conditions_digest": { "$ref": "#/$defs/digest" },
+        "verified_at": { "$ref": "#/$defs/timestamp" },
+        "verified_by": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "verified_at", "verified_by"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "verified_at": { "$ref": "#/$defs/timestamp" },
+        "verified_by": { "$ref": "#/$defs/uuid" }
+      }
+    },
+    "last_seen_at": { "$ref": "#/$defs/timestamp" },
+    "quarantine_reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "draining_reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "updated_at": { "$ref": "#/$defs/timestamp" },
+    "error_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "maxLength": 100
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "pool_state": { "enum": ["RESERVED", "ATTACHED"] } },
+        "required": ["pool_state"]
+      },
+      "then": {
+        "properties": { "occupancy_state": { "const": "OCCUPIED" } },
+        "required": ["current_lease_id"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "pool_state": { "const": "QUARANTINED" } },
+        "required": ["pool_state"]
+      },
+      "then": { "required": ["quarantine_reason"] }
+    },
+    {
+      "if": {
+        "properties": { "pool_state": { "const": "DRAINING" } },
+        "required": ["pool_state"]
+      },
+      "then": { "required": ["draining_reason"] }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    }
+  }
+}

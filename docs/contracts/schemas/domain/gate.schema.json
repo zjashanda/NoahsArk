@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.invalid/contracts/domain/gate.schema.json",
+  "title": "NoahsArk Gate",
+  "description": "Ordered gate G0..G7. Gates may not be skipped. G4 smoke uses an independent run and never enters the formal denominator; G5 formal runs after G4 passes. Contract version 1.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "gate_id",
+    "task_id",
+    "revision_id",
+    "gate_code",
+    "order_index",
+    "status",
+    "entered_at",
+    "evaluated_by",
+    "blockers",
+    "evidence_refs",
+    "version"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "gate_id": { "$ref": "#/$defs/uuid" },
+    "task_id": { "$ref": "#/$defs/uuid" },
+    "revision_id": { "$ref": "#/$defs/uuid" },
+    "run_id": {
+      "$ref": "#/$defs/uuid",
+      "description": "Required for G3..G6; omitted for G0..G2 and G7 unless explicitly linked."
+    },
+    "gate_code": {
+      "type": "string",
+      "enum": ["G0", "G1", "G2", "G3", "G4", "G5", "G6", "G7"],
+      "description": "Top-level gates only. G2.0..G2.2 are sub-checks recorded under G2 evidence/blockers."
+    },
+    "order_index": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 7
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PENDING", "IN_PROGRESS", "PASSED", "FAILED", "BLOCKED", "SKIPPED"]
+    },
+    "entered_at": { "$ref": "#/$defs/timestamp" },
+    "exited_at": { "$ref": "#/$defs/timestamp" },
+    "evaluated_by": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "blocker_owner": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$",
+            "maxLength": 100
+          },
+          "message": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "owner": { "type": "string", "minLength": 1, "maxLength": 200 }
+        }
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "digest", "kind"],
+        "properties": {
+          "evidence_id": { "$ref": "#/$defs/uuid" },
+          "digest": { "$ref": "#/$defs/digest" },
+          "kind": { "type": "string", "minLength": 1, "maxLength": 100 }
+        }
+      }
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optimistic concurrency version."
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 4000
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "gate_code": { "const": "G0" } }, "required": ["gate_code"] },
+      "then": { "properties": { "order_index": { "const": 0 } } }
+    },
+    {
+      "if": { "properties": { "gate_code": { "const": "G1" } }, "required": ["gate_code"] },
+      "then": { "properties": { "order_index": { "const": 1 } } }
+    },
+    {
+      "if": { "properties": { "gate_code": { "const": "G2" } }, "required": ["gate_code"] },
+      "then": { "properties": { "order_index": { "const": 2 } } }
+    },
+    {
+      "if": { "properties": { "gate_code": { "const": "G3" } }, "required": ["gate_code"] },
+      "then": { "properties": { "order_index": { "const": 3 } }, "required": ["run_id"] }
+    },
+    {
+      "if": { "properties": { "gate_code": { "const": "G4" } }, "required": ["gate_code"] },
+      "then": { "properties": { "order_index": { "const": 4 } }, "required": ["run_id"] }
+    },
+    {
+      "if": { "properties": { "gate_code": { "const": "G5" } }, "required": ["gate_code"] },
+      "then": { "properties": { "order_index": { "const": 5 } }, "required": ["run_id"] }
+    },
+    {
+      "if": { "properties": { "gate_code": { "const": "G6" } }, "required": ["gate_code"] },
+      "then": { "properties": { "order_index": { "const": 6 } }, "required": ["run_id"] }
+    },
+    {
+      "if": { "properties": { "gate_code": { "const": "G7" } }, "required": ["gate_code"] },
+      "then": { "properties": { "order_index": { "const": 7 } } }
+    },
+    {
+      "if": {
+        "properties": { "status": { "enum": ["PASSED", "FAILED", "BLOCKED"] } },
+        "required": ["status"]
+      },
+      "then": { "required": ["exited_at"] }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "BLOCKED" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["blocker_owner"] }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    }
+  }
+}

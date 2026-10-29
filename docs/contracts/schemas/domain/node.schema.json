@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.invalid/contracts/domain/node.schema.json",
+  "title": "NoahsArk Node",
+  "description": "Windows Node Agent identity, communication visibility, interactive session, work directory and offline spool. Communication loss never stops a started run and never releases a device. Contract version 1.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "node_id",
+    "hostname",
+    "identity",
+    "agent_version",
+    "os",
+    "runtime",
+    "communication_state",
+    "heartbeat_interval_seconds",
+    "status",
+    "interactive_session",
+    "work_dir",
+    "spool",
+    "capabilities",
+    "endpoint_ids",
+    "registered_at",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "node_id": { "$ref": "#/$defs/uuid" },
+    "hostname": { "type": "string", "minLength": 1, "maxLength": 253 },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "certificate_fingerprint",
+        "certificate_subject",
+        "certificate_chain_id",
+        "issued_at",
+        "expires_at",
+        "rotation_generation"
+      ],
+      "properties": {
+        "certificate_fingerprint": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "certificate_subject": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "certificate_chain_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "issued_at": { "$ref": "#/$defs/timestamp" },
+        "expires_at": { "$ref": "#/$defs/timestamp" },
+        "rotation_generation": { "type": "integer", "minimum": 1 },
+        "revoked_at": { "$ref": "#/$defs/timestamp" },
+        "revocation_reason": { "type": "string", "minLength": 1, "maxLength": 1000 }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["revoked_at"] },
+          "then": { "required": ["revocation_reason"] }
+        }
+      ]
+    },
+    "agent_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "build"],
+      "properties": {
+        "name": { "type": "string", "const": "windows" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "build": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python_version", "lstest_version", "adapter_version"],
+      "properties": {
+        "python_version": { "type": "string", "minLength": 1, "maxLength": 50 },
+        "lstest_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "adapter_version": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "communication_state": {
+      "type": "string",
+      "enum": ["ONLINE", "STALE", "OFFLINE"],
+      "description": "Visibility only. Does not change execution permit, device occupancy or run state."
+    },
+    "last_heartbeat_at": { "$ref": "#/$defs/timestamp" },
+    "heartbeat_interval_seconds": { "type": "integer", "minimum": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["ACTIVE", "DRAINING", "QUARANTINED", "RETIRED"]
+    },
+    "interactive_session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": { "type": "string", "enum": ["AVAILABLE", "UNAVAILABLE", "LOCKED"] },
+        "session_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "checked_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "work_dir": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["drive", "root", "capacity_bytes", "free_bytes", "warn_threshold_bytes", "protect_threshold_bytes"],
+      "properties": {
+        "drive": { "type": "string", "pattern": "^[A-Za-z]:$" },
+        "root": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "capacity_bytes": { "type": "integer", "minimum": 0 },
+        "free_bytes": { "type": "integer", "minimum": 0 },
+        "warn_threshold_bytes": { "type": "integer", "minimum": 0 },
+        "protect_threshold_bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "spool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "used_bytes", "warn_threshold_bytes", "protect_threshold_bytes"],
+      "properties": {
+        "state": { "type": "string", "enum": ["NORMAL", "WARN", "PROTECT", "BLOCKED"] },
+        "used_bytes": { "type": "integer", "minimum": 0 },
+        "warn_threshold_bytes": { "type": "integer", "minimum": 0 },
+        "protect_threshold_bytes": { "type": "integer", "minimum": 0 },
+        "oldest_message_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 100 },
+      "uniqueItems": true
+    },
+    "endpoint_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+      "uniqueItems": true
+    },
+    "quarantine_reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "draining_reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "registered_at": { "$ref": "#/$defs/timestamp" },
+    "updated_at": { "$ref": "#/$defs/timestamp" },
+    "error_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "maxLength": 100
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "QUARANTINED" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["quarantine_reason"] }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "DRAINING" } },
+        "required": ["status"]
+      },
+      "then": { "required": ["draining_reason"] }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    }
+  }
+}

@@ -1,0 +1,685 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/contracts/experience/audit-event.schema.json",
+  "title": "NoahsArk Audit Event",
+  "description": "不可变、仅追加的审计事件。每次访问决策（允许或拒绝）都必须留痕；事件记录操作者、角色、动作、对象、before/after、原因、时间、任务/修订/运行关联和访问决策。审计事件不得更新或删除，更正必须通过补偿事件表达。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_version",
+    "sequence",
+    "occurred_at",
+    "recorded_at",
+    "actor",
+    "action",
+    "object",
+    "scope",
+    "change",
+    "reason",
+    "access_decision",
+    "correlation",
+    "redaction",
+    "retention",
+    "integrity"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "x-ui-visibility": "ui-safe"
+    },
+    "event_id": {
+      "$ref": "#/$defs/identifier",
+      "x-ui-visibility": "ui-safe"
+    },
+    "event_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "事件载荷版本；同一 event_id 不得产生新版本。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "控制面单调递增序号，用于排序与哈希链。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "occurred_at": {
+      "$ref": "#/$defs/timestamp",
+      "description": "动作实际发生时间。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "recorded_at": {
+      "$ref": "#/$defs/timestamp",
+      "description": "控制面写入审计日志时间；与 occurred_at 分开，以识别时钟偏差和补传。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "actor_type",
+        "role",
+        "display_name",
+        "session_id",
+        "auth_method",
+        "on_behalf_of"
+      ],
+      "properties": {
+        "actor_id": { "$ref": "#/$defs/identifier" },
+        "actor_type": {
+          "enum": ["HUMAN", "AGENT", "SYSTEM", "NODE_AGENT", "EXTERNAL_SERVICE"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "role": {
+          "enum": [
+            "OBSERVER",
+            "TERMINAL_OPERATOR",
+            "SESSION_MANAGER",
+            "SUPER_ADMIN",
+            "SYSTEM",
+            "NODE_AGENT",
+            "AGENT"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "display_name": {
+          "anyOf": [
+            { "type": "string", "maxLength": 120 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "session_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "auth_method": {
+          "enum": ["PASSWORD", "OIDC", "MTLS", "NODE_CERT", "INTERNAL", "UNKNOWN"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "on_behalf_of": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_code", "category", "description"],
+      "properties": {
+        "action_code": {
+          "enum": [
+            "TASK_CREATE",
+            "TASK_UPDATE",
+            "TASK_CLOSE",
+            "REVISION_CREATE",
+            "REVISION_FREEZE",
+            "REVISION_SUPERSEDE",
+            "APPROVAL_REQUEST",
+            "APPROVAL_DECIDE",
+            "APPROVAL_TIMEOUT",
+            "GATE_ENTER",
+            "GATE_PASS",
+            "GATE_FAIL",
+            "GATE_BLOCK",
+            "RUN_START",
+            "RUN_STOP_REQUEST",
+            "RUN_STOP",
+            "RUN_COMPLETE",
+            "RUN_ABORT",
+            "RUN_RECONCILE",
+            "LEASE_ACQUIRE",
+            "LEASE_RENEW",
+            "LEASE_RELEASE",
+            "LEASE_EXPIRE",
+            "DEVICE_STATE_CHANGE",
+            "DEVICE_QUARANTINE",
+            "DEVICE_RECOVER",
+            "EVIDENCE_UPLOAD",
+            "EVIDENCE_VERIFY",
+            "EVIDENCE_ACCESS",
+            "EVIDENCE_ARCHIVE",
+            "EVIDENCE_DELETE_REQUEST",
+            "VERDICT_WRITE",
+            "RESULT_OVERRIDE",
+            "REPORT_GENERATE",
+            "REPORT_FREEZE",
+            "REPORT_EXPORT",
+            "REPORT_RETRACT",
+            "KNOWLEDGE_CANDIDATE_CREATE",
+            "KNOWLEDGE_CANDIDATE_REVIEW",
+            "KNOWLEDGE_PROMOTE",
+            "KNOWLEDGE_REVOKE",
+            "KNOWLEDGE_STALE_MARK",
+            "KNOWLEDGE_CONFLICT_RESOLVE",
+            "ACCESS_DECISION",
+            "ROLE_CHANGE",
+            "SETTINGS_CHANGE",
+            "SESSION_RESTORE",
+            "SESSION_REVOKE",
+            "NODE_REGISTER",
+            "NODE_ROTATE_CREDENTIAL",
+            "NODE_REVOKE",
+            "NODE_DRAIN",
+            "BUNDLE_GENERATE",
+            "BUNDLE_FREEZE",
+            "STOP_REQUEST",
+            "AUDIT_EXPORT",
+            "DATA_RETENTION_CHANGE",
+            "SYSTEM_CLOCK_CHANGE"
+          ],
+          "description": "审计动作目录。只允许追加，不允许定义 AUDIT_UPDATE/AUDIT_DELETE。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "category": {
+          "enum": [
+            "TASK",
+            "APPROVAL",
+            "GATE",
+            "RUN",
+            "LEASE",
+            "DEVICE",
+            "EVIDENCE",
+            "VERDICT",
+            "REPORT",
+            "KNOWLEDGE",
+            "ACCESS",
+            "IDENTITY",
+            "NODE",
+            "CONFIG",
+            "SESSION",
+            "AUDIT",
+            "SYSTEM"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 300,
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "object": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["object_type", "object_id", "object_version", "display_name"],
+      "properties": {
+        "object_type": {
+          "enum": [
+            "TASK",
+            "REVISION",
+            "APPROVAL",
+            "GATE",
+            "RUN",
+            "ATTEMPT",
+            "CASE",
+            "CASE_RESULT",
+            "VERDICT",
+            "EVIDENCE_SET",
+            "EVIDENCE_ITEM",
+            "LEASE",
+            "DEVICE",
+            "NODE",
+            "EXECUTION_BUNDLE",
+            "REPORT",
+            "KNOWLEDGE_CANDIDATE",
+            "KNOWLEDGE_ITEM",
+            "ACCESS_POLICY",
+            "USER_ROLE",
+            "SETTING",
+            "SESSION",
+            "AUDIT_LOG",
+            "SYSTEM"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "object_id": { "$ref": "#/$defs/identifier" },
+        "object_version": {
+          "anyOf": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "display_name": {
+          "anyOf": [
+            { "type": "string", "maxLength": 200 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "revision_id",
+        "run_id",
+        "node_id",
+        "device_id",
+        "evidence_id",
+        "knowledge_id",
+        "report_id"
+      ],
+      "description": "任务/修订/运行关联字段必须存在；与任务无关的系统事件可为 null，但不得省略键。",
+      "properties": {
+        "task_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "revision_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "run_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "node_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "device_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "evidence_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "knowledge_id": { "$ref": "#/$defs/nullableIdentifier" },
+        "report_id": { "$ref": "#/$defs/nullableIdentifier" }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "change_type",
+        "before",
+        "after",
+        "changed_fields",
+        "before_redacted_fields",
+        "after_redacted_fields"
+      ],
+      "description": "变更前后值。before/after 必须是已脱敏对象，不得包含原始音频、日志正文、密钥或 PII。",
+      "properties": {
+        "change_type": {
+          "enum": [
+            "CREATE",
+            "UPDATE",
+            "DELETE",
+            "STATE_TRANSITION",
+            "READ",
+            "EXPORT",
+            "DECISION",
+            "PROMOTE",
+            "NONE"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "before": {
+          "anyOf": [
+            { "type": "object" },
+            { "type": "null" }
+          ]
+        },
+        "after": {
+          "anyOf": [
+            { "type": "object" },
+            { "type": "null" }
+          ]
+        },
+        "changed_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "uniqueItems": true
+        },
+        "before_redacted_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "uniqueItems": true
+        },
+        "after_redacted_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "uniqueItems": true
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "reason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason_code", "reason_text"],
+      "properties": {
+        "reason_code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "x-ui-visibility": "ui-safe"
+        },
+        "reason_text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "access_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "resource_class",
+        "required_access_level",
+        "granted_access_level",
+        "policy_id",
+        "matched_rule_id",
+        "denial_reason",
+        "audited"
+      ],
+      "description": "每次动作附带的访问决策。拒绝必须留痕并给出原因；不得只记录允许事件。",
+      "properties": {
+        "decision": {
+          "enum": ["ALLOW", "DENY"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "resource_class": {
+          "enum": [
+            "TASK_CARD",
+            "REPORT_SUMMARY",
+            "EVIDENCE_INDEX",
+            "RAW_AUDIO",
+            "RAW_LOG",
+            "EVIDENCE_FILE",
+            "KNOWLEDGE_CANDIDATE",
+            "KNOWLEDGE_ITEM",
+            "AUDIT_EVENT",
+            "AUDIT_EXPORT",
+            "SETTINGS",
+            "USER_ROLE",
+            "NODE_CONTROL",
+            "DEVICE_CONTROL"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "required_access_level": { "$ref": "#/$defs/accessLevel" },
+        "granted_access_level": { "$ref": "#/$defs/accessLevel" },
+        "policy_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "matched_rule_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "denial_reason": {
+          "anyOf": [
+            { "type": "string", "maxLength": 300 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "audited": { "const": true }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "correlation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["request_id", "trace_id", "source_service", "source_ip_hash"],
+      "properties": {
+        "request_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "trace_id": {
+          "anyOf": [
+            { "type": "string", "maxLength": 64 },
+            { "type": "null" }
+          ]
+        },
+        "source_service": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "x-ui-visibility": "ui-safe"
+        },
+        "source_ip_hash": {
+          "anyOf": [
+            { "type": "string", "maxLength": 128 },
+            { "type": "null" }
+          ],
+          "description": "只保存哈希，不保存明文 IP。"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["applied", "redacted_fields", "policy_version"],
+      "properties": {
+        "applied": { "type": "boolean", "x-ui-visibility": "ui-safe" },
+        "redacted_fields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 80 }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "retain_until", "disposition"],
+      "properties": {
+        "class": {
+          "enum": ["AUDIT_LONG", "VERDICT_LONG", "EVIDENCE_30D"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "retain_until": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "disposition": {
+          "enum": ["RETAIN", "ARCHIVE_ALLOWED", "DELETE_PROHIBITED"],
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previous_event_hash",
+        "event_hash",
+        "hash_algorithm",
+        "immutable",
+        "append_only"
+      ],
+      "properties": {
+        "previous_event_hash": {
+          "anyOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "event_hash": { "$ref": "#/$defs/sha256" },
+        "hash_algorithm": { "const": "sha256" },
+        "immutable": { "const": true },
+        "append_only": { "const": true }
+      },
+      "description": "哈希链完整性。任何更新或删除都会破坏 previous_event_hash/event_hash 链。",
+      "x-ui-visibility": "ui-safe"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "change": {
+            "properties": {
+              "change_type": {
+                "enum": ["CREATE", "UPDATE", "STATE_TRANSITION", "DECISION", "PROMOTE"]
+              }
+            },
+            "required": ["change_type"]
+          }
+        },
+        "required": ["change"]
+      },
+      "then": {
+        "properties": {
+          "change": { "properties": { "after": { "type": "object" } } }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "change": {
+            "properties": { "change_type": { "const": "DELETE" } },
+            "required": ["change_type"]
+          }
+        },
+        "required": ["change"]
+      },
+      "then": {
+        "properties": {
+          "change": { "properties": { "before": { "type": "object" } } }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "change": {
+            "properties": {
+              "change_type": { "enum": ["UPDATE", "STATE_TRANSITION"] }
+            },
+            "required": ["change_type"]
+          }
+        },
+        "required": ["change"]
+      },
+      "then": {
+        "properties": {
+          "change": { "properties": { "changed_fields": { "minItems": 1 } } }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "access_decision": {
+            "properties": { "decision": { "const": "DENY" } },
+            "required": ["decision"]
+          }
+        },
+        "required": ["access_decision"]
+      },
+      "then": {
+        "properties": {
+          "access_decision": {
+            "properties": { "denial_reason": { "type": "string", "minLength": 1 } }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "nullableIdentifier": {
+      "anyOf": [
+        { "$ref": "#/$defs/identifier" },
+        { "type": "null" }
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "accessLevel": {
+      "enum": [
+        "PUBLIC_SUMMARY",
+        "SUMMARY_INDEX",
+        "TASK_AUTHORIZED",
+        "EVIDENCE_AUTHORIZED",
+        "ADMIN_ONLY",
+        "DENY"
+      ]
+    }
+  },
+  "x-ui-field-policy": {
+    "authority": "authoritative-append-only",
+    "ui_safe": [
+      "event_id",
+      "sequence",
+      "occurred_at",
+      "recorded_at",
+      "actor.actor_type",
+      "actor.role",
+      "actor.display_name",
+      "actor.auth_method",
+      "action",
+      "object",
+      "scope",
+      "change.change_type",
+      "change.changed_fields",
+      "reason",
+      "access_decision.decision",
+      "access_decision.resource_class",
+      "access_decision.required_access_level",
+      "access_decision.granted_access_level",
+      "access_decision.denial_reason",
+      "retention",
+      "redaction.applied",
+      "redaction.redacted_fields"
+    ],
+    "restricted": [
+      "change.before",
+      "change.after"
+    ],
+    "server_only": [
+      "actor.actor_id",
+      "actor.session_id",
+      "actor.on_behalf_of",
+      "correlation.request_id",
+      "correlation.trace_id",
+      "correlation.source_ip_hash",
+      "integrity.previous_event_hash",
+      "integrity.event_hash",
+      "redaction.policy_version"
+    ],
+    "never_expose": [
+      "raw_audio",
+      "raw_log_text",
+      "secrets",
+      "credentials",
+      "pii",
+      "absolute_storage_paths"
+    ]
+  }
+}

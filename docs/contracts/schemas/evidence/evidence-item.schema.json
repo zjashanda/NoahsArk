@@ -1,0 +1,868 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.noahsark.local/evidence/evidence-item.schema.json",
+  "title": "NoahsArk Evidence Item v1",
+  "description": "One immutable evidence item with provenance, digest, upload state, locator, retention and access classification.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "evidence_class",
+    "role",
+    "state",
+    "provenance",
+    "access_level",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "Stable logical identity. Never changes when the locator changes.",
+      "format": "uuid"
+    },
+    "evidence_class": {
+      "$ref": "#/$defs/evidenceClass"
+    },
+    "role": {
+      "$ref": "#/$defs/evidenceRole"
+    },
+    "state": {
+      "$ref": "#/$defs/evidenceState"
+    },
+    "content_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 of the complete content. Null only while the item is not complete."
+    },
+    "size_bytes": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "media_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "digest_scope": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "raw_bytes",
+        "canonical_json",
+        null
+      ],
+      "description": "raw_bytes for original artifacts; canonical_json for structured control records."
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "upload": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/upload"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "locator": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/locator"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "retention": {
+      "$ref": "#/$defs/retention"
+    },
+    "access_level": {
+      "$ref": "#/$defs/accessLevel"
+    },
+    "classification": {
+      "$ref": "#/$defs/classification"
+    },
+    "integrity": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/integrity"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "log_read": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/logRead"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Required when evidence_class is linux_log_read. Records the whitelist query and its outcome."
+    },
+    "related_event_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "supersedes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "Previous evidence_id replaced by this item. Never overwrite the old item."
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "complete",
+              "verified",
+              "conflicted"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "required": [
+          "content_digest",
+          "size_bytes"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "verified"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "required": [
+          "integrity"
+        ],
+        "properties": {
+          "integrity": {
+            "properties": {
+              "mismatch": {
+                "const": false
+              },
+              "digest_verified_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "mismatch",
+              "digest_verified_at"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidence_class": {
+            "const": "linux_log_read"
+          }
+        },
+        "required": [
+          "evidence_class"
+        ]
+      },
+      "then": {
+        "required": [
+          "log_read"
+        ],
+        "properties": {
+          "log_read": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "log_read": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "log_read"
+        ]
+      },
+      "then": {
+        "properties": {
+          "evidence_class": {
+            "const": "linux_log_read"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "evidenceClass": {
+      "type": "string",
+      "enum": [
+        "raw_audio",
+        "device_log",
+        "serial_log",
+        "screenshot",
+        "execution_log",
+        "manifest",
+        "receipt",
+        "anomaly_event",
+        "linux_log_read",
+        "human_note"
+      ]
+    },
+    "evidenceRole": {
+      "type": "string",
+      "enum": [
+        "required",
+        "optional_diagnostic",
+        "supporting",
+        "derived"
+      ]
+    },
+    "evidenceState": {
+      "type": "string",
+      "enum": [
+        "declared",
+        "uploading",
+        "partial",
+        "complete",
+        "verified",
+        "conflicted",
+        "unavailable",
+        "quarantined"
+      ]
+    },
+    "accessLevel": {
+      "type": "string",
+      "enum": [
+        "summary",
+        "task_member",
+        "evidence_reader",
+        "system_internal"
+      ]
+    },
+    "archiveState": {
+      "type": "string",
+      "enum": [
+        "not_required",
+        "hot_only",
+        "pending",
+        "archived",
+        "archive_unavailable",
+        "deletion_blocked"
+      ]
+    },
+    "trustLevel": {
+      "type": "string",
+      "enum": [
+        "claimed",
+        "signed",
+        "recomputed",
+        "reviewed"
+      ]
+    },
+    "logRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query_id",
+        "source_path",
+        "range",
+        "byte_count",
+        "completeness",
+        "purpose"
+      ],
+      "properties": {
+        "query_id": {
+          "type": "string"
+        },
+        "source_path": {
+          "type": "string",
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*\\.\\.).+$"
+        },
+        "range": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "offset",
+                "length"
+              ],
+              "properties": {
+                "offset": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "length": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cursor",
+                "limit"
+              ],
+              "properties": {
+                "cursor": {
+                  "type": "string"
+                },
+                "limit": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          ]
+        },
+        "started_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "byte_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "result_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completeness": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial",
+            "failed"
+          ]
+        },
+        "error_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "required_verification",
+            "optional_diagnostic",
+            "anomaly_replay"
+          ]
+        }
+      }
+    },
+    "producer": {
+      "type": "string",
+      "enum": [
+        "windows_node_agent",
+        "lstest_adapter",
+        "linux_control_plane",
+        "linux_verifier",
+        "human"
+      ]
+    },
+    "deviceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "device_id",
+        "endpoints"
+      ],
+      "properties": {
+        "device_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serial": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "firmware": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer",
+        "task_id",
+        "revision_id",
+        "run_id",
+        "trust_level"
+      ],
+      "properties": {
+        "producer": {
+          "$ref": "#/$defs/producer"
+        },
+        "producer_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "captured_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "received_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "task_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "revision_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "case_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "attempt": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "node_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "device_identity": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/deviceIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+  "bundle_id": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "format": "uuid",
+   "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+  },
+        "bundle_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "job_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "lease_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "lease_epoch": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "clock_source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "node_monotonic",
+            "node_wall",
+            "linux_ntp",
+            "unknown",
+            null
+          ]
+        },
+        "timebase_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "max_clock_drift_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "trust_level": {
+          "$ref": "#/$defs/trustLevel"
+        }
+      }
+    },
+    "upload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chunks_total",
+        "chunks_received"
+      ],
+      "properties": {
+        "chunk_size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chunks_total": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chunks_received": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bytes_received": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/uploadSession"
+          },
+          "default": []
+        }
+      }
+    },
+    "uploadSession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "upload_id",
+        "started_at",
+        "resume_offset",
+        "status"
+      ],
+      "properties": {
+        "upload_id": {
+          "type": "string"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "resume_offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "started",
+            "paused",
+            "finished",
+            "failed",
+            "aborted"
+          ]
+        }
+      }
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "available"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "content_addressed",
+            "node_local",
+            "archive",
+            "on_demand"
+          ]
+        },
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "node_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "relative_path": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Run-relative path. Absolute paths and '..' are rejected by the consumer."
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "checked_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class",
+        "archive_state"
+      ],
+      "properties": {
+        "class": {
+          "type": "string",
+          "enum": [
+            "hot_30d",
+            "long_term",
+            "task_scoped",
+            "permanent"
+          ]
+        },
+        "hot_until": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "archive_state": {
+          "$ref": "#/$defs/archiveState"
+        },
+        "archive_uri": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "archive_verified_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contains_pii": {
+          "type": "boolean",
+          "default": false
+        },
+        "contains_raw_audio": {
+          "type": "boolean",
+          "default": false
+        },
+        "contains_credentials": {
+          "type": "boolean",
+          "default": false
+        },
+        "redacted": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mismatch"
+      ],
+      "properties": {
+        "digest_verified_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "verified_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mismatch": {
+          "type": "boolean"
+        },
+        "declared_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

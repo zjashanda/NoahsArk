@@ -1,0 +1,504 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.noahsark.local/evidence/cleanup-receipt.schema.json",
+  "title": "NoahsArk Cleanup Receipt v1",
+  "description": "Node-produced cleanup fact receipt. Missing receipt blocks release confirmation only; it does not automatically make the evidence set incomplete.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "receipt_type",
+    "receipt_id",
+    "run_id",
+    "job_id",
+    "attempt",
+    "node_id",
+    "device_identity",
+    "started_at",
+    "finished_at",
+    "cleanup_status",
+    "local_stop_confirmed",
+    "safe_cleanup_done",
+    "steps",
+    "resources",
+    "facts_digest",
+    "receipt_digest",
+    "produced_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "receipt_type": {
+      "const": "cleanup"
+    },
+    "receipt_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "format": "uuid"
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "revision_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "job_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "node_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "device_identity": {
+      "$ref": "#/$defs/deviceIdentity"
+    },
+    "lease_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "lease_epoch": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cleanup_status": {
+      "$ref": "#/$defs/cleanupStatus"
+    },
+    "local_stop_confirmed": {
+      "type": "boolean",
+      "description": "Node-local stop fact. Must be true when cleanup_status is completed or completed_with_warnings."
+    },
+    "safe_cleanup_done": {
+      "type": "boolean",
+      "description": "Resources released and device left safe. Must be true when cleanup_status is completed or completed_with_warnings."
+    },
+    "failure_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Required when cleanup_status is failed."
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cleanupStep"
+      },
+      "default": []
+    },
+    "resources": {
+      "$ref": "#/$defs/resources"
+    },
+    "safety_stop": {
+      "$ref": "#/$defs/safetyStop"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/warning"
+      },
+      "default": []
+    },
+    "facts_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "receipt_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "signature": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/signature"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "produced_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "cleanup_status": {
+            "const": "completed"
+          }
+        },
+        "required": [
+          "cleanup_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "steps": {
+            "minItems": 1
+          },
+          "local_stop_confirmed": {
+            "const": true
+          },
+          "safe_cleanup_done": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cleanup_status": {
+            "const": "failed"
+          }
+        },
+        "required": [
+          "cleanup_status"
+        ]
+      },
+      "then": {
+        "required": [
+          "failure_code"
+        ],
+        "properties": {
+          "failure_code": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "cleanup_status": {
+            "const": "completed_with_warnings"
+          }
+        },
+        "required": [
+          "cleanup_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "warnings": {
+            "minItems": 1
+          },
+          "local_stop_confirmed": {
+            "const": true
+          },
+          "safe_cleanup_done": {
+            "const": true
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "cleanupStatus": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "completed_with_warnings",
+        "failed",
+        "not_required",
+        "unknown"
+      ]
+    },
+    "deviceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "device_id",
+        "endpoints"
+      ],
+      "properties": {
+        "device_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serial": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "firmware": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "cleanupStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_id",
+        "action",
+        "status",
+        "started_at",
+        "finished_at"
+      ],
+      "properties": {
+        "step_id": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "stop_safe",
+            "stop_manual",
+            "terminate_processes",
+            "close_files",
+            "release_endpoints",
+            "reset_device",
+            "flush_spool",
+            "verify_idle",
+            "other"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "skipped",
+            "failed",
+            "unknown"
+          ]
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "detail_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "default": []
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "processes_terminated",
+        "files_closed",
+        "endpoints_released",
+        "device_reset_performed",
+        "device_state_after",
+        "spool_flushed",
+        "residual_warnings"
+      ],
+      "properties": {
+        "processes_terminated": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "files_closed": {
+          "type": "boolean"
+        },
+        "endpoints_released": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "device_reset_performed": {
+          "type": "boolean"
+        },
+        "device_state_after": {
+          "type": "string",
+          "enum": [
+            "idle",
+            "running",
+            "unknown",
+            "unsafe",
+            "offline"
+          ]
+        },
+        "spool_flushed": {
+          "type": "boolean"
+        },
+        "residual_warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "safetyStop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "triggered"
+      ],
+      "properties": {
+        "triggered": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "node_local",
+            "linux_command",
+            "human",
+            "device_fault",
+            null
+          ]
+        }
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "severity"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error",
+            "critical"
+          ]
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signer",
+        "key_id",
+        "algorithm",
+        "signed_at",
+        "value"
+      ],
+      "properties": {
+        "signer": {
+          "type": "string"
+        },
+        "key_id": {
+          "type": "string"
+        },
+        "algorithm": {
+          "type": "string"
+        },
+        "signed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schemas/security/anomaly-event.schema.json",
+  "title": "NoahsArk node anomaly event v1",
+  "description": "Node -> control-plane signed anomaly event. recommended_action is advisory only; the control plane decides whether to STOP, drain or quarantine. No command or script field exists.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "message_type",
+    "sender_role",
+    "message_id",
+    "node_id",
+    "job_id",
+    "lease_id",
+    "epoch",
+    "nonce",
+    "issued_at",
+    "expires_at",
+    "payload_hash",
+    "signature",
+    "key_id",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "protocol_version": { "const": "noahsark.node/v1" },
+    "message_type": { "const": "anomaly_event" },
+    "sender_role": { "const": "node" },
+    "message_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "node_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "job_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "lease_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$"
+    },
+    "issued_at": { "$ref": "#/$defs/timestamp" },
+    "expires_at": { "$ref": "#/$defs/timestamp" },
+    "payload_hash": { "$ref": "#/$defs/sha256" },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^ed25519:[0-9a-f]{32}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "anomaly_id",
+        "category",
+        "severity",
+        "detected_at",
+        "task_id",
+        "revision_id",
+        "run_id",
+        "job_id",
+        "lease_id",
+        "epoch",
+        "device_id",
+        "endpoint_id",
+        "summary",
+        "facts",
+        "evidence_refs",
+        "recommended_action",
+        "local_action_taken",
+        "dedupe_key",
+        "first_seen_at",
+        "occurrence_count"
+      ],
+      "properties": {
+        "anomaly_id": {
+          "type": "string",
+          "pattern": "^anom_[0-9a-f]{32}$"
+        },
+        "category": {
+          "enum": [
+            "device_disconnected",
+            "endpoint_missing",
+            "audio_capture_unavailable",
+            "serial_io_error",
+            "tool_crash",
+            "execution_timeout",
+            "artifact_digest_mismatch",
+            "disk_pressure",
+            "spool_overflow",
+            "interactive_session_missing",
+            "clock_skew",
+            "identity_expiring",
+            "control_plane_unreachable",
+            "local_stop_triggered",
+            "resource_exhausted",
+            "unexpected_reboot",
+            "security_tamper_suspected",
+            "other"
+          ]
+        },
+        "severity": { "enum": ["info", "warning", "error", "critical"] },
+        "detected_at": { "$ref": "#/$defs/timestamp" },
+        "task_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "revision_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "run_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "job_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "lease_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "epoch": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "device_id": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "endpoint_id": {
+          "type": ["string", "null"],
+          "pattern": "^endpoint_[0-9a-f]{32}$"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "facts": {
+          "type": "object",
+          "maxProperties": 64,
+          "additionalProperties": true
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "digest", "relative_path"],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "tool_log",
+                  "serial_log",
+                  "results_csv",
+                  "cases_csv",
+                  "run_manifest",
+                  "audio_capture",
+                  "screenshot",
+                  "cleanup_receipt",
+                  "windows_event"
+                ]
+              },
+              "digest": { "$ref": "#/$defs/sha256" },
+              "relative_path": {
+                "type": ["string", "null"],
+                "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)[.][.](?:/|$))(?!.*//)(?!.*(?:^|/)[.](?:/|$))(?=.*[.](?:log|txt|json|jsonl|csv|xml)$)[A-Za-z0-9._/-]{1,512}$"
+              }
+            }
+          }
+        },
+        "recommended_action": {
+          "enum": [
+            "none",
+            "retry",
+            "stop_safe",
+            "drain_device",
+            "quarantine_device",
+            "human_review",
+            "renew_identity",
+            "sync_clock",
+            "free_disk"
+          ]
+        },
+        "local_action_taken": {
+          "enum": ["none", "stop_safe", "drain", "quarantine", "cleanup", "restart_runner"]
+        },
+        "dedupe_key": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "first_seen_at": { "$ref": "#/$defs/timestamp" },
+        "occurrence_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        }
+      }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

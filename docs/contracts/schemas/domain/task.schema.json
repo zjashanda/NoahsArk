@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.invalid/contracts/domain/task.schema.json",
+  "title": "NoahsArk Task",
+  "description": "Long-lived task identity. One task has exactly one assigned lead agent. No successor task may be created; scope changes derive a new revision under the same task_id. Contract version 1.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task_id",
+    "task_category",
+    "title",
+    "objective",
+    "entry_mode",
+    "origin",
+    "status",
+    "lead_agent_id",
+    "lead_session_id",
+    "revision_ids",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "task_id": {
+      "$ref": "#/$defs/uuid",
+      "description": "Authoritative long-lived task identity; never changes on session resume, reconnect or revision derivation."
+    },
+    "task_category": {
+      "type": "string",
+      "enum": ["voice_interaction"],
+      "description": "V0.0.1 operating category. Other categories must be rejected rather than claimed as supported."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "entry_mode": {
+      "type": "string",
+      "enum": ["conversation", "file", "spreadsheet", "form", "template"]
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw_input_refs", "submitted_by", "submitted_at", "normalization_digest"],
+      "properties": {
+        "raw_input_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ref_id", "kind", "digest", "captured_at"],
+            "properties": {
+              "ref_id": { "$ref": "#/$defs/uuid" },
+              "kind": {
+                "type": "string",
+                "enum": ["conversation", "file", "spreadsheet", "form", "template"]
+              },
+              "digest": { "$ref": "#/$defs/digest" },
+              "captured_at": { "$ref": "#/$defs/timestamp" },
+              "locator": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048,
+                "description": "Opaque reference to the raw input. Must not contain credentials."
+              }
+            }
+          }
+        },
+        "submitted_by": { "$ref": "#/$defs/uuid" },
+        "submitted_at": { "$ref": "#/$defs/timestamp" },
+        "normalization_digest": {
+          "$ref": "#/$defs/digest",
+          "description": "Digest of the normalized draft; used for create-task idempotency."
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "REVIEW",
+        "APPROVED",
+        "EXECUTING",
+        "VERIFYING",
+        "REPORTED",
+        "CLOSED",
+        "BLOCKED",
+        "STOPPED",
+        "ARCHIVED"
+      ],
+      "description": "Task-level status. Revision freeze status is tracked on Revision, not here."
+    },
+    "lead_agent_id": {
+      "$ref": "#/$defs/uuid",
+      "description": "Exactly one assigned lead agent. Arrays are forbidden; the lead conversation is interaction context only and never an execution authorization."
+    },
+    "lead_session_id": { "$ref": "#/$defs/uuid" },
+    "project_id": { "$ref": "#/$defs/uuid" },
+    "current_revision_id": { "$ref": "#/$defs/uuid" },
+    "revision_ids": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/uuid" },
+      "uniqueItems": true,
+      "description": "Revision lineage in creation order."
+    },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "updated_at": { "$ref": "#/$defs/timestamp" }
+  },
+  "dependentRequired": {
+    "current_revision_id": ["revision_ids"]
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+      "description": "RFC 3339 UTC timestamp ending in Z."
+    }
+  }
+}

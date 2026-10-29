@@ -1,0 +1,724 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/contracts/experience/report.schema.json",
+  "title": "NoahsArk Report",
+  "description": "任务报告契约。报告必须把自动化检查、烟测、正式记录和人工补充分开；默认披露级别为 SUMMARY_INDEX，只暴露摘要与证据索引元数据，不包含原始音频、原始日志、密钥或 PII。人工补充记录不得产生自动 PASS。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "report_version",
+    "task_id",
+    "revision_id",
+    "run_ids",
+    "generated_at",
+    "generated_by",
+    "lifecycle_state",
+    "disclosure",
+    "denominator",
+    "verdict_summary",
+    "record_separation",
+    "sections",
+    "evidence_index",
+    "audit_ref",
+    "integrity",
+    "access_level",
+    "ui"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "x-ui-visibility": "ui-safe"
+    },
+    "report_id": {
+      "$ref": "#/$defs/identifier",
+      "x-ui-visibility": "ui-safe"
+    },
+    "report_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "同一 report_id 的生成版本；冻结后不可原地覆盖，只能生成新版本或标记 superseded。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "task_id": {
+      "$ref": "#/$defs/identifier",
+      "x-ui-visibility": "ui-safe"
+    },
+    "revision_id": {
+      "$ref": "#/$defs/identifier",
+      "description": "报告只绑定一个不可变修订；跨修订内容必须分别出报告或显式标注来源。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "run_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/identifier" },
+      "uniqueItems": true,
+      "description": "报告覆盖的运行尝试。烟测与正式运行必须保持独立，不因同报告展示而合并分母。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "report_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "devices", "case_ids"],
+      "properties": {
+        "mode": {
+          "enum": ["SMOKE", "FORMAL", "MIXED", "BLOCKED", "STOPPED", "UNKNOWN"],
+          "description": "Report coverage scope, NOT Run.mode (R-03, 2026-10-29). SMOKE/FORMAL/MIXED describe which run kinds the report covers (MIXED = smoke and formal). BLOCKED/STOPPED mean the covered set contains blocked/stopped runs; they are retained only as a 1.x-compatible transitional vocabulary and must not be rendered as execution modes. Use contains_blocked/contains_stopped for new producers. UNKNOWN only when coverage cannot be determined. Run.mode remains static/smoke/formal.",
+          "x-ui-visibility": "ui-safe"
+        },
+        "devices": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "case_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "contains_blocked": {
+          "type": "boolean",
+          "description": "Optional additive (1.x) flag: the report's covered run set contains at least one blocked run. Independent of report_scope.mode and never interpreted as a run mode.",
+          "x-ui-visibility": "ui-safe"
+        },
+        "contains_stopped": {
+          "type": "boolean",
+          "description": "Optional additive (1.x) flag: the report's covered run set contains at least one stopped run. Independent of report_scope.mode and never interpreted as a run mode.",
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp",
+      "x-ui-visibility": "ui-safe"
+    },
+    "generated_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_type", "actor_id", "role"],
+      "properties": {
+        "actor_type": {
+          "enum": ["SYSTEM", "AGENT", "HUMAN"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "actor_id": { "$ref": "#/$defs/identifier" },
+        "role": {
+          "enum": [
+            "OBSERVER",
+            "TERMINAL_OPERATOR",
+            "SESSION_MANAGER",
+            "SUPER_ADMIN",
+            "SYSTEM"
+          ],
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "lifecycle_state": {
+      "enum": ["DRAFT", "FROZEN", "SUPERSEDED", "RETRACTED"],
+      "description": "FROZEN 后报告内容不可变；更正通过新版本或勘误事件表达。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "disclosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_access_level",
+        "raw_audio_included",
+        "raw_logs_included",
+        "secrets_included",
+        "pii_included",
+        "redaction_policy_version",
+        "restricted_sections_require_access_level"
+      ],
+      "description": "默认报告披露边界。以下四个 included 标志在 V0.0.1 报告中必须为 false。",
+      "properties": {
+        "default_access_level": { "const": "SUMMARY_INDEX" },
+        "raw_audio_included": { "const": false },
+        "raw_logs_included": { "const": false },
+        "secrets_included": { "const": false },
+        "pii_included": { "const": false },
+        "redaction_policy_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "restricted_sections_require_access_level": {
+          "enum": ["EVIDENCE_AUTHORIZED", "ADMIN_ONLY"]
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "denominator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basis",
+        "excludes_smoke",
+        "excludes_invalid",
+        "excludes_blocked_stopped",
+        "planned",
+        "executed",
+        "valid",
+        "invalid",
+        "blocked",
+        "stopped",
+        "flaky_suspect",
+        "per_device",
+        "per_case",
+        "notes"
+      ],
+      "description": "正式分母口径声明。分母只含有效正式样本；烟测、INVALID_*、BLOCKED、STOPPED 不计入。",
+      "properties": {
+        "basis": { "const": "VALID_FORMAL_SAMPLES" },
+        "excludes_smoke": { "const": true },
+        "excludes_invalid": { "const": true },
+        "excludes_blocked_stopped": { "const": true },
+        "planned": { "$ref": "#/$defs/nullableCount" },
+        "executed": { "$ref": "#/$defs/nullableCount" },
+        "valid": { "$ref": "#/$defs/nullableCount" },
+        "invalid": { "$ref": "#/$defs/nullableCount" },
+        "blocked": { "$ref": "#/$defs/nullableCount" },
+        "stopped": { "$ref": "#/$defs/nullableCount" },
+        "flaky_suspect": { "$ref": "#/$defs/nullableCount" },
+        "per_device": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "device_identity",
+              "planned",
+              "executed",
+              "valid",
+              "invalid",
+              "blocked",
+              "stopped"
+            ],
+            "properties": {
+              "device_identity": { "type": "string", "minLength": 1, "maxLength": 160 },
+              "planned": { "$ref": "#/$defs/nullableCount" },
+              "executed": { "$ref": "#/$defs/nullableCount" },
+              "valid": { "$ref": "#/$defs/nullableCount" },
+              "invalid": { "$ref": "#/$defs/nullableCount" },
+              "blocked": { "$ref": "#/$defs/nullableCount" },
+              "stopped": { "$ref": "#/$defs/nullableCount" }
+            },
+            "x-ui-visibility": "ui-safe"
+          },
+          "x-ui-visibility": "ui-safe"
+        },
+        "per_case": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "case_id",
+              "device_identity",
+              "planned",
+              "executed",
+              "valid",
+              "invalid",
+              "blocked",
+              "stopped"
+            ],
+            "properties": {
+              "case_id": { "$ref": "#/$defs/identifier" },
+              "device_identity": { "type": "string", "minLength": 1, "maxLength": 160 },
+              "planned": { "$ref": "#/$defs/nullableCount" },
+              "executed": { "$ref": "#/$defs/nullableCount" },
+              "valid": { "$ref": "#/$defs/nullableCount" },
+              "invalid": { "$ref": "#/$defs/nullableCount" },
+              "blocked": { "$ref": "#/$defs/nullableCount" },
+              "stopped": { "$ref": "#/$defs/nullableCount" }
+            },
+            "x-ui-visibility": "ui-safe"
+          },
+          "x-ui-visibility": "ui-safe"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500,
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "verdict_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "overall_business_verdict",
+        "axes",
+        "automated_pass_source",
+        "human_supplement_can_produce_pass",
+        "fail_closed",
+        "unresolved_count"
+      ],
+      "description": "五轴判定的报告级汇总。不得把五轴压成单一布尔 PASS；overall 只是业务轴汇总，必须同时展示其余四轴。",
+      "properties": {
+        "overall_business_verdict": {
+          "enum": ["PASS", "FAIL", "EXPECTED", "WARN", "NEEDS_REVIEW", "NOT_EVALUATED"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "axes": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "五轴投影。execution_status/evidence_status/verification_status 的 UNKNOWN 仅为展示占位（R-03, 2026-10-29），不得写回 Run/Attempt/verdict.axes；权威枚举缺省值分别为 NOT_STARTED/INCOMPLETE/NOT_RUN。validity_status 的 UNKNOWN 是权威枚举成员。",
+          "required": [
+            "execution_status",
+            "validity_status",
+            "business_verdict",
+            "evidence_status",
+            "verification_status"
+          ],
+          "properties": {
+            "execution_status": {
+              "enum": ["NOT_STARTED", "RUNNING", "COMPLETED", "ABORTED", "SKIPPED", "UNKNOWN"],
+              "x-ui-visibility": "ui-safe"
+            },
+            "validity_status": {
+              "enum": ["VALID", "INVALID", "BLOCKED", "UNKNOWN"],
+              "x-ui-visibility": "ui-safe"
+            },
+            "business_verdict": {
+              "enum": ["PASS", "FAIL", "EXPECTED", "WARN", "NEEDS_REVIEW", "NOT_EVALUATED"],
+              "x-ui-visibility": "ui-safe"
+            },
+            "evidence_status": {
+              "enum": ["COMPLETE", "INCOMPLETE", "CONFLICTED", "UNVERIFIED", "UNKNOWN"],
+              "x-ui-visibility": "ui-safe"
+            },
+            "verification_status": {
+              "enum": ["PASS", "FAIL", "NOT_RUN", "UNKNOWN"],
+              "x-ui-visibility": "ui-safe"
+            }
+          },
+          "x-ui-visibility": "ui-safe"
+        },
+        "automated_pass_source": {
+          "const": "AUTOMATED_REPLAY_OBJECTIVE_EVIDENCE"
+        },
+        "human_supplement_can_produce_pass": { "const": false },
+        "fail_closed": { "const": true },
+        "unresolved_count": { "type": "integer", "minimum": 0 }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "record_separation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "automated_checks_present",
+        "smoke_present",
+        "formal_present",
+        "human_supplements_present",
+        "smoke_in_formal_denominator",
+        "human_supplement_counts_as_automated"
+      ],
+      "description": "四类记录必须分开。烟测不得进入正式分母；人工补充不得计入自动化结果。",
+      "properties": {
+        "automated_checks_present": { "type": "boolean" },
+        "smoke_present": { "type": "boolean" },
+        "formal_present": { "type": "boolean" },
+        "human_supplements_present": { "type": "boolean" },
+        "smoke_in_formal_denominator": { "const": false },
+        "human_supplement_counts_as_automated": { "const": false }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "section_id",
+          "category",
+          "title",
+          "status",
+          "record_kind",
+          "visibility",
+          "summary",
+          "counts",
+          "item_refs"
+        ],
+        "properties": {
+          "section_id": { "$ref": "#/$defs/identifier" },
+          "category": {
+            "enum": [
+              "summary",
+              "automated_checks",
+              "smoke",
+              "formal_records",
+              "human_supplements",
+              "deviations",
+              "completion_assessment",
+              "blockers",
+              "metrics",
+              "residual_risks",
+              "deliverables_reusable_assets",
+              "lessons_learned",
+              "evidence_index",
+              "unresolved_items"
+            ],
+            "x-ui-visibility": "ui-safe"
+          },
+          "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "status": {
+            "enum": ["POPULATED", "EMPTY", "NOT_APPLICABLE"],
+            "description": "EMPTY/NOT_APPLICABLE 仍必须出现该分类，避免读者误以为漏项。",
+            "x-ui-visibility": "ui-safe"
+          },
+          "record_kind": {
+            "enum": [
+              "AUTOMATED_CHECK",
+              "SMOKE",
+              "FORMAL",
+              "HUMAN_SUPPLEMENT",
+              "INFRASTRUCTURE",
+              "MIXED",
+              "NONE"
+            ],
+            "x-ui-visibility": "ui-safe"
+          },
+          "visibility": {
+            "enum": ["SUMMARY", "INDEX", "RESTRICTED"],
+            "x-ui-visibility": "ui-safe"
+          },
+          "summary": { "type": "string", "maxLength": 2000 },
+          "counts": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/nullableCount" },
+            "description": "可选分段计数；键由 section 自定义，但值必须真实，未知为 null。",
+            "x-ui-visibility": "ui-safe"
+          },
+          "item_refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["item_id", "kind", "result", "evidence_ref_count", "access_level"],
+              "properties": {
+                "item_id": { "$ref": "#/$defs/identifier" },
+                "kind": {
+                  "enum": [
+                    "AUTOMATED_CHECK",
+                    "SMOKE_CASE",
+                    "FORMAL_CASE",
+                    "HUMAN_NOTE",
+                    "ANOMALY",
+                    "RETEST",
+                    "DEVIATION",
+                    "RISK",
+                    "ASSET",
+                    "OTHER"
+                  ],
+                  "x-ui-visibility": "ui-safe"
+                },
+                "result": {
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXPECTED",
+                    "WARN",
+                    "NEEDS_REVIEW",
+                    "NOT_EVALUATED",
+                    "NOT_APPLICABLE",
+                    "UNKNOWN"
+                  ],
+                  "x-ui-visibility": "ui-safe"
+                },
+                "evidence_ref_count": { "type": "integer", "minimum": 0 },
+                "access_level": { "$ref": "#/$defs/accessLevel" }
+              }
+            }
+          }
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "evidence_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index_version",
+        "total_items",
+        "verified_items",
+        "unverified_items",
+        "by_kind",
+        "entries"
+      ],
+      "description": "默认报告只给证据索引元数据，不包含原始内容或绝对存储路径。",
+      "properties": {
+        "index_version": { "const": "1.0" },
+        "total_items": { "type": "integer", "minimum": 0 },
+        "verified_items": { "type": "integer", "minimum": 0 },
+        "unverified_items": { "type": "integer", "minimum": 0 },
+        "by_kind": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "count", "access_level"],
+            "properties": {
+              "kind": { "$ref": "#/$defs/evidenceKind" },
+              "count": { "type": "integer", "minimum": 0 },
+              "access_level": { "$ref": "#/$defs/accessLevel" }
+            }
+          }
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "evidence_id",
+              "kind",
+              "digest",
+              "size_bytes",
+              "collected_at",
+              "access_level",
+              "display_path_hint"
+            ],
+            "properties": {
+              "evidence_id": { "$ref": "#/$defs/identifier" },
+              "kind": { "$ref": "#/$defs/evidenceKind" },
+              "digest": { "$ref": "#/$defs/sha256" },
+              "size_bytes": { "type": "integer", "minimum": 0 },
+              "collected_at": { "$ref": "#/$defs/timestamp" },
+              "access_level": { "$ref": "#/$defs/accessLevel" },
+              "display_path_hint": {
+                "type": "string",
+                "maxLength": 300,
+                "description": "run 内相对路径提示；不得是绝对路径或包含凭据。",
+                "x-ui-visibility": "ui-safe"
+              }
+            }
+          }
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "audit_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frozen_event_id", "report_hash_event_id"],
+      "properties": {
+        "frozen_event_id": { "$ref": "#/$defs/identifier" },
+        "report_hash_event_id": { "$ref": "#/$defs/identifier" }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_digest", "signature", "immutable", "schema_version"],
+      "properties": {
+        "content_digest": { "$ref": "#/$defs/sha256" },
+        "signature": {
+          "anyOf": [
+            { "type": "string", "minLength": 1, "maxLength": 4096 },
+            { "type": "null" }
+          ],
+          "description": "可选服务端签名；不得下发给普通 UI 作为可执行凭据。"
+        },
+        "immutable": { "const": true },
+        "schema_version": { "const": "1.0" }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "access_level": {
+      "$ref": "#/$defs/accessLevel",
+      "x-ui-visibility": "ui-safe"
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["default_sections", "restricted_sections", "download_allowed", "disclose_evidence_index"],
+      "properties": {
+        "default_sections": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "summary",
+              "metrics",
+              "verdict_summary",
+              "evidence_index",
+              "blockers",
+              "residual_risks"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "restricted_sections": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 80 },
+          "uniqueItems": true
+        },
+        "download_allowed": { "type": "boolean" },
+        "disclose_evidence_index": { "type": "boolean" }
+      },
+      "x-ui-visibility": "ui-safe"
+    }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "sections": {
+          "contains": {
+            "properties": { "category": { "const": "summary" } },
+            "required": ["category"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "sections": {
+          "contains": {
+            "properties": { "category": { "const": "automated_checks" } },
+            "required": ["category"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "sections": {
+          "contains": {
+            "properties": { "category": { "const": "smoke" } },
+            "required": ["category"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "sections": {
+          "contains": {
+            "properties": { "category": { "const": "formal_records" } },
+            "required": ["category"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "sections": {
+          "contains": {
+            "properties": { "category": { "const": "human_supplements" } },
+            "required": ["category"]
+          }
+        }
+      }
+    },
+    {
+      "properties": {
+        "sections": {
+          "contains": {
+            "properties": { "category": { "const": "evidence_index" } },
+            "required": ["category"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "lifecycle_state": { "const": "FROZEN" } },
+        "required": ["lifecycle_state"]
+      },
+      "then": {
+        "properties": { "integrity": { "properties": { "signature": { "type": "string" } } } }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nullableCount": {
+      "anyOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "null" }
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "accessLevel": {
+      "enum": [
+        "PUBLIC_SUMMARY",
+        "SUMMARY_INDEX",
+        "TASK_AUTHORIZED",
+        "EVIDENCE_AUTHORIZED",
+        "ADMIN_ONLY",
+        "DENY"
+      ]
+    },
+    "evidenceKind": {
+      "enum": [
+        "AUDIO",
+        "SERIAL_LOG",
+        "TOOL_LOG",
+        "RUN_MANIFEST",
+        "RESULT_CSV",
+        "CASES_CSV",
+        "SCREENSHOT",
+        "TOOL_EVIDENCE",
+        "OTHER"
+      ]
+    }
+  },
+  "x-ui-field-policy": {
+    "authority": "authoritative-report-with-disclosure-projection",
+    "ui_safe_default": [
+      "report_id",
+      "report_version",
+      "task_id",
+      "revision_id",
+      "run_ids",
+      "generated_at",
+      "lifecycle_state",
+      "disclosure",
+      "denominator",
+      "verdict_summary",
+      "record_separation",
+      "sections[category,title,status,record_kind,visibility,summary,counts]",
+      "evidence_index[counts,by_kind,entries[evidence_id,kind,digest,size_bytes,collected_at,access_level,display_path_hint]]"
+    ],
+    "restricted": [
+      "sections[visibility=RESTRICTED]",
+      "evidence_index.entries where access_level=EVIDENCE_AUTHORIZED"
+    ],
+    "server_only": [
+      "integrity.signature",
+      "audit_ref.frozen_event_id",
+      "audit_ref.report_hash_event_id"
+    ],
+    "never_expose": [
+      "raw_audio",
+      "raw_log_text",
+      "secrets",
+      "credentials",
+      "pii",
+      "absolute_storage_paths"
+    ]
+  }
+}

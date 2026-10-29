@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schemas/security/node-enrollment.schema.json",
+  "title": "NoahsArk node enrollment message v1",
+  "description": "Node -> control-plane first-contact enrollment. Self-signed with the node's newly generated Ed25519 key and bound to a one-time enrollment token. The token is writeOnly and MUST NOT be logged. Contains no real credential values.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "protocol_version",
+    "message_type",
+    "sender_role",
+    "message_id",
+    "node_id",
+    "job_id",
+    "lease_id",
+    "epoch",
+    "nonce",
+    "issued_at",
+    "expires_at",
+    "payload_hash",
+    "signature",
+    "key_id",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "protocol_version": { "const": "noahsark.node/v1" },
+    "message_type": { "const": "node_enrollment" },
+    "sender_role": { "const": "node" },
+    "message_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "node_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "job_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "lease_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "epoch": { "const": 0 },
+    "nonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$"
+    },
+    "issued_at": { "$ref": "#/$defs/timestamp" },
+    "expires_at": { "$ref": "#/$defs/timestamp" },
+    "payload_hash": { "$ref": "#/$defs/sha256" },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^ed25519:[0-9a-f]{32}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enrollment_id",
+        "enrollment_token",
+        "key_algorithm",
+        "key_id",
+        "public_key",
+        "key_generation",
+        "device_facts",
+        "requested_capabilities",
+        "contact_policy"
+      ],
+      "properties": {
+        "enrollment_id": {
+          "type": "string",
+          "pattern": "^enr_[0-9a-f]{32}$"
+        },
+        "enrollment_token": {
+          "type": "string",
+          "writeOnly": true,
+          "minLength": 43,
+          "maxLength": 43,
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "description": "One-time 256-bit bootstrap token. Never log, persist in plaintext, or echo."
+        },
+        "key_algorithm": { "const": "Ed25519" },
+        "key_id": {
+          "type": "string",
+          "pattern": "^ed25519:[0-9a-f]{32}$"
+        },
+        "public_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{59}$",
+          "description": "Ed25519 SubjectPublicKeyInfo DER, base64url without padding."
+        },
+        "key_generation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "previous_key_id": {
+          "type": ["string", "null"],
+          "pattern": "^ed25519:[0-9a-f]{32}$"
+        },
+        "device_facts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hostname_hash",
+            "os_family",
+            "os_version",
+            "architecture",
+            "agent_version",
+            "tpm_status",
+            "interactive_session_capable",
+            "utc_now",
+            "time_source"
+          ],
+          "properties": {
+            "hostname_hash": { "$ref": "#/$defs/sha256" },
+            "os_family": { "const": "windows" },
+            "os_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+            "architecture": { "enum": ["x86_64", "arm64"] },
+            "agent_version": { "type": "string", "minLength": 1, "maxLength": 64 },
+            "tpm_status": { "enum": ["available", "unavailable", "unknown"] },
+            "interactive_session_capable": { "type": "boolean" },
+            "utc_now": { "$ref": "#/$defs/timestamp" },
+            "time_source": { "enum": ["w32time", "ntp", "ptp", "manual", "unknown"] },
+            "machine_id_hash": {
+              "type": ["string", "null"],
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+          }
+        },
+        "requested_capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["audio_capture", "audio_playback", "serial", "usb", "network", "display"],
+            "description": "Requested node capability identifier (C-04, 2026-10-29). Capability keywords are not endpoint identities and do not by themselves grant occupancy; network/display remain non-occupiable in V0.0.1 pending T-10."
+          }
+        },
+        "contact_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["outbound_only"],
+          "properties": {
+            "outbound_only": { "const": true },
+            "preferred_poll_timeout_seconds": {
+              "type": "integer",
+              "minimum": 10,
+              "maximum": 50
+            }
+          }
+        },
+        "attestation": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "description": "Optional future TPM attestation bundle. Null in v1 when unavailable.",
+          "properties": {
+            "type": { "enum": ["tpm2_quote"] },
+            "quote_b64u": { "type": "string", "maxLength": 16384 },
+            "ak_public_key_b64u": { "type": "string", "maxLength": 4096 }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

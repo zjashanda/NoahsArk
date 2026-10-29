@@ -1,0 +1,1122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schemas/config/thresholds.schema.json",
+  "title": "NoahsArk V0.0.1 runtime thresholds contract v1",
+  "description": "Machine-readable form of docs/contracts/thresholds.md (thresholds-v1). Values are v1 frozen-candidate defaults or templates; they are not approved production values. Hard safety bounds may only be tightened, never loosened. Lease expiry, heartbeat loss and communication offline never release a device or stop an already-started frozen run; approval timeout never auto-rejects; disk/spool protection performs a local safe stop and preserves evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_version",
+    "status",
+    "precedence",
+    "lease_heartbeat",
+    "job_dispatch_stop",
+    "retry_backoff",
+    "approval",
+    "windows_disk",
+    "spool",
+    "evidence_upload",
+    "log_query",
+    "clock_nonce_epoch",
+    "task_templates",
+    "safety_invariants"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "description": "Payload schema version. Missing or unknown values are fail-closed."
+    },
+    "contract_version": {
+      "const": "thresholds-v1"
+    },
+    "status": {
+      "description": "Candidate until the owner approves; never silently treated as approved.",
+      "enum": [
+        "frozen-candidate",
+        "frozen",
+        "deprecated"
+      ],
+      "default": "frozen-candidate"
+    },
+    "updated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "precedence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order",
+        "upper_bound_resolution",
+        "lower_bound_resolution",
+        "fixed_resolution",
+        "unknown_config",
+        "out_of_bounds",
+        "run_override_allowlist_only",
+        "safety_floor_wins"
+      ],
+      "properties": {
+        "order": {
+          "description": "Effective configuration precedence, lowest to highest; schema_default is the explicit lowest layer (the v1 defaults in thresholds.md), environment is the deployment layer and is the same layer previously called node, and the hard safety floor is applied last and only ever tightens.",
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {
+            "enum": [
+              "schema_default",
+              "global_default",
+              "environment",
+              "task_revision",
+              "run_override",
+              "hard_safety_floor"
+            ]
+          },
+          "allOf": [
+            {
+              "contains": {
+                "const": "hard_safety_floor"
+              }
+            },
+            {
+              "contains": {
+                "const": "schema_default"
+              }
+            }
+          ],
+          "default": [
+            "schema_default",
+            "global_default",
+            "environment",
+            "task_revision",
+            "run_override",
+            "hard_safety_floor"
+          ]
+        },
+        "upper_bound_resolution": {
+          "const": "min"
+        },
+        "lower_bound_resolution": {
+          "const": "max"
+        },
+        "fixed_resolution": {
+          "const": "reject_override"
+        },
+        "unknown_config": {
+          "const": "fail_closed"
+        },
+        "out_of_bounds": {
+          "const": "CONFIG_OUT_OF_BOUNDS"
+        },
+        "run_override_allowlist_only": {
+          "description": "Run overrides may only touch operational keys declared in the frozen revision's run_override_allowlist, and may only tighten them. Sample size, pass threshold, oracle, device actions, budget and evidence requirements are immutable per B-3.",
+          "const": true
+        },
+        "safety_floor_wins": {
+          "const": true
+        }
+      }
+    },
+    "lease_heartbeat": {
+      "description": "Heartbeat visibility, lease renewal, offline continuation and reconnect reconciliation. Scope: node / control-plane. Class: H (semantics) + O (values). Derived value TH-L-03 offline_after_seconds = heartbeat_interval_seconds * offline_after_missed and is not independently configurable.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "heartbeat_interval_seconds",
+        "offline_after_missed",
+        "lease_duration_seconds",
+        "lease_renew_at_fraction",
+        "lease_expiry_grace_seconds",
+        "expiry_semantics",
+        "release_requires",
+        "reconnect_reconciliation_window_seconds",
+        "stop_first_on_reconnect",
+        "offline_continuation",
+        "offline_notify_after_seconds",
+        "offline_needs_review_after_seconds",
+        "max_continuation_seconds"
+      ],
+      "properties": {
+        "heartbeat_interval_seconds": {
+          "description": "TH-L-01. Unit: seconds. Scope: node. Direction: upper (tighten only).",
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 60,
+          "default": 30
+        },
+        "offline_after_missed": {
+          "description": "TH-L-02. Unit: heartbeat count. Scope: control-plane. Reaching it marks communication_offline only; it never changes occupancy or stops a run.",
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 5,
+          "default": 2
+        },
+        "lease_duration_seconds": {
+          "description": "TH-L-04. Unit: seconds. Scope: device lease. Direction: upper (may extend to 300). This is a renewal deadline, not an ownership expiry.",
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 300,
+          "default": 60
+        },
+        "lease_renew_at_fraction": {
+          "description": "TH-L-05. Unit: ratio of lease duration. Renew at or before this fraction.",
+          "type": "number",
+          "minimum": 0.3,
+          "maximum": 0.8,
+          "default": 0.5
+        },
+        "lease_expiry_grace_seconds": {
+          "description": "TH-L-06. Unit: seconds. Applied to delayed renewals only; does not create ownership.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 60,
+          "default": 30
+        },
+        "expiry_semantics": {
+          "description": "TH-L-07. Fixed safety semantics.",
+          "const": "renewal_deadline_only"
+        },
+        "release_requires": {
+          "description": "TH-L-08. Fixed: device release needs local stop, safe cleanup and occupancy reconciliation.",
+          "const": "local_stop+cleanup+reconciliation"
+        },
+        "reconnect_reconciliation_window_seconds": {
+          "description": "TH-L-09. Unit: seconds. On expiry escalate to a human; the device stays OCCUPIED.",
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600,
+          "default": 900
+        },
+        "stop_first_on_reconnect": {
+          "description": "TH-L-10. Fixed reconnect order.",
+          "const": "required"
+        },
+        "offline_continuation": {
+          "description": "TH-L-11. Fixed: only already-started frozen runs continue; new jobs are refused.",
+          "const": "allowed_for_started_frozen_runs"
+        },
+        "offline_notify_after_seconds": {
+          "description": "TH-L-12. Unit: seconds. Notify only; no stop, no release.",
+          "type": "integer",
+          "minimum": 300,
+          "maximum": 86400,
+          "default": 1800
+        },
+        "offline_needs_review_after_seconds": {
+          "description": "TH-L-13. Unit: seconds. Marks the task card NEEDS_REVIEW; still no stop and no release.",
+          "type": "integer",
+          "minimum": 3600,
+          "maximum": 604800,
+          "default": 86400
+        },
+        "max_continuation_seconds": {
+          "description": "TH-L-14. Fixed: offline continuation is bounded only by local disk, spool and device safety stops, not by a timer.",
+          "const": "unbounded_with_local_safety"
+        }
+      }
+    },
+    "job_dispatch_stop": {
+      "description": "Job dispatch, STOP delivery, job duration and attempt limits, receipt backfill. Class: O + H.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dispatch_timeout_seconds",
+        "dispatch_max_attempts",
+        "stop_ack_deadline_seconds",
+        "stop_redelivery_interval_seconds",
+        "stop_max_pending_hours",
+        "max_job_duration_seconds",
+        "max_job_attempts",
+        "receipt_retry_window_hours",
+        "receipt_max_backoff_seconds"
+      ],
+      "properties": {
+        "dispatch_timeout_seconds": {
+          "description": "TH-D-01. Unit: seconds. On timeout mark DISPATCH_TIMEOUT; never re-dispatch concurrently.",
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 900,
+          "default": 120
+        },
+        "dispatch_max_attempts": {
+          "description": "TH-D-02. Unit: count. Same (job_id, attempt) idempotency; no new job_id to bypass.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 3
+        },
+        "stop_ack_deadline_seconds": {
+          "description": "TH-D-03. Unit: seconds. Missing ACK keeps STOP pending; it never means stopped.",
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120,
+          "default": 30
+        },
+        "stop_redelivery_interval_seconds": {
+          "description": "TH-D-04. Unit: seconds. Redeliver with a new nonce and signature.",
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 300,
+          "default": 30
+        },
+        "stop_max_pending_hours": {
+          "description": "TH-D-05. Unit: hours. Pending STOP escalates repeatedly and is never auto-cleared.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24
+        },
+        "max_job_duration_seconds": {
+          "description": "TH-D-12. Unit: seconds. Per-job declared bound, default 24h, hard ceiling 7 days. Reaching it performs a local safe stop, not a verdict failure.",
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 604800,
+          "default": 86400
+        },
+        "max_job_attempts": {
+          "description": "TH-D-11. Unit: count. Exhaustion leads to NEEDS_REVIEW with all attempts retained.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 10
+        },
+        "receipt_retry_window_hours": {
+          "description": "TH-D-13. Unit: hours. Backfill window for spooled receipts.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24
+        },
+        "receipt_max_backoff_seconds": {
+          "description": "TH-D-14. Unit: seconds. Backfill backoff ceiling.",
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 600,
+          "default": 300
+        }
+      }
+    },
+    "retry_backoff": {
+      "description": "Transport, upload and receipt retry backoff. Class: O.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initial_interval_seconds",
+        "multiplier",
+        "max_interval_seconds",
+        "jitter_ratio",
+        "consecutive_failures_offline"
+      ],
+      "properties": {
+        "initial_interval_seconds": {
+          "description": "TH-D-06. Unit: seconds.",
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 10,
+          "default": 1
+        },
+        "multiplier": {
+          "description": "TH-D-07. Unit: factor.",
+          "type": "number",
+          "minimum": 1.5,
+          "maximum": 3,
+          "default": 2.0
+        },
+        "max_interval_seconds": {
+          "description": "TH-D-08. Unit: seconds.",
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 300,
+          "default": 60
+        },
+        "jitter_ratio": {
+          "description": "TH-D-09. Unit: ratio.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.5,
+          "default": 0.2
+        },
+        "consecutive_failures_offline": {
+          "description": "TH-D-10. Unit: count. Only affects communication state.",
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 20,
+          "default": 10
+        }
+      }
+    },
+    "approval": {
+      "description": "Approval reminders and escalation. Timeout never auto-rejects and never auto-approves. Class: H + O.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reminder_interval_seconds",
+        "escalation_after_seconds",
+        "auto_reject",
+        "auto_approve",
+        "wait_timer_seconds",
+        "require_comment",
+        "max_pending",
+        "escalation_target",
+        "reminder_channels"
+      ],
+      "properties": {
+        "reminder_interval_seconds": {
+          "description": "TH-A-01. Unit: seconds. Reminder only; state stays PENDING.",
+          "type": "integer",
+          "minimum": 3600,
+          "maximum": 604800,
+          "default": 86400
+        },
+        "escalation_after_seconds": {
+          "description": "TH-A-02. Unit: seconds. Escalation only; state stays PENDING.",
+          "type": "integer",
+          "minimum": 3600,
+          "maximum": 1209600,
+          "default": 172800
+        },
+        "auto_reject": {
+          "description": "TH-A-03. Fixed false: timeout must never reject a task.",
+          "const": false
+        },
+        "auto_approve": {
+          "description": "TH-A-04. Fixed false in production.",
+          "const": false
+        },
+        "wait_timer_seconds": {
+          "description": "TH-A-05. Unit: seconds. Approvals before the timer are rejected as WAIT_TIMER_ACTIVE.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800,
+          "default": 0
+        },
+        "require_comment": {
+          "description": "TH-A-06. Fixed true in v1.",
+          "const": true
+        },
+        "max_pending": {
+          "description": "TH-A-07. Fixed: pending approvals never end by timeout; they only block gates.",
+          "const": "unbounded"
+        },
+        "escalation_target": {
+          "description": "TH-A-08. Must resolve to a concrete human/role; resolution failure escalates to the platform admin queue.",
+          "enum": [
+            "highest_permission_then_platform_admin",
+            "platform_admin",
+            "named_role"
+          ],
+          "default": "highest_permission_then_platform_admin"
+        },
+        "reminder_channels": {
+          "description": "TH-A-09. At least one channel; delivery failure is retried and audited.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "in_app",
+              "email",
+              "chatops"
+            ]
+          },
+          "default": [
+            "in_app",
+            "email"
+          ]
+        }
+      }
+    },
+    "windows_disk": {
+      "description": "Windows D: capacity protection. Trigger is OR: ratio below threshold OR free bytes below threshold. Protect performs a local safe stop and preserves evidence; it never deletes evidence. Class: H + O.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "warn_free_ratio",
+        "warn_free_bytes",
+        "protect_free_ratio",
+        "protect_free_bytes",
+        "protect_action",
+        "never_delete_evidence"
+      ],
+      "properties": {
+        "warn_free_ratio": {
+          "description": "TH-S-01. Unit: free/total ratio.",
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.4,
+          "default": 0.2
+        },
+        "warn_free_bytes": {
+          "description": "TH-S-02. Unit: bytes (50 GiB).",
+          "type": "integer",
+          "minimum": 5368709120,
+          "maximum": 214748364800,
+          "default": 53687091200
+        },
+        "protect_free_ratio": {
+          "description": "TH-S-03. Unit: free/total ratio.",
+          "type": "number",
+          "minimum": 0.03,
+          "maximum": 0.2,
+          "default": 0.1
+        },
+        "protect_free_bytes": {
+          "description": "TH-S-04. Unit: bytes (20 GiB).",
+          "type": "integer",
+          "minimum": 2147483648,
+          "maximum": 85899345920,
+          "default": 21474836480
+        },
+        "protect_action": {
+          "description": "TH-S-05. Fixed: local safe stop + preserve evidence + report.",
+          "const": "local_safe_stop_preserve_evidence"
+        },
+        "never_delete_evidence": {
+          "description": "TH-S-06. Fixed true.",
+          "const": true
+        }
+      }
+    },
+    "spool": {
+      "description": "Node spool capacity and retention-adjacent rules. Class: H + O.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_bytes",
+        "max_ratio_of_work_dir",
+        "warn_ratio",
+        "protect_ratio",
+        "delete_only_after_ack",
+        "retention_hot_days",
+        "retention_delete_requires"
+      ],
+      "properties": {
+        "max_bytes": {
+          "description": "TH-S-07. Unit: bytes (2 GiB). Effective max is min(max_bytes, ratio * capacity).",
+          "type": "integer",
+          "minimum": 268435456,
+          "maximum": 21474836480,
+          "default": 2147483648
+        },
+        "max_ratio_of_work_dir": {
+          "description": "TH-S-08. Unit: ratio of work-dir capacity.",
+          "type": "number",
+          "minimum": 0.02,
+          "maximum": 0.2,
+          "default": 0.1
+        },
+        "warn_ratio": {
+          "description": "TH-S-09. Unit: ratio of effective spool max. Blocks new cases only.",
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 0.9,
+          "default": 0.7
+        },
+        "protect_ratio": {
+          "description": "TH-S-10. Unit: ratio of effective spool max. Local safe stop.",
+          "type": "number",
+          "minimum": 0.8,
+          "maximum": 1.0,
+          "default": 0.95
+        },
+        "delete_only_after_ack": {
+          "description": "TH-S-11. Fixed true: no spool deletion before control-plane ACK.",
+          "const": true
+        },
+        "retention_hot_days": {
+          "description": "TH-S-12. Unit: days. Hard floor 30; extension only. Expiry marks archive_pending, never deletes.",
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3650,
+          "default": 30
+        },
+        "retention_delete_requires": {
+          "description": "TH-S-13. Fixed: archived + authorized + audited.",
+          "const": "archived+authorized+audited"
+        }
+      }
+    },
+    "evidence_upload": {
+      "description": "Evidence chunked upload, retries and partial-upload semantics. Partial upload is a state, not a failure. Class: O + H.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chunk_size_bytes",
+        "max_chunks_per_upload",
+        "chunk_retry_initial_seconds",
+        "chunk_retry_max_seconds",
+        "chunk_retry_max_attempts",
+        "chunk_inactivity_timeout_seconds",
+        "session_inactivity_timeout_seconds",
+        "completion_deadline_hours",
+        "upload_concurrency_per_node",
+        "manifest_max_bytes",
+        "partial_is_failure"
+      ],
+      "properties": {
+        "chunk_size_bytes": {
+          "description": "TH-E-01. Unit: bytes (8 MiB).",
+          "type": "integer",
+          "minimum": 1048576,
+          "maximum": 16777216,
+          "default": 8388608
+        },
+        "max_chunks_per_upload": {
+          "description": "TH-E-02. Unit: chunks per upload session.",
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 10000,
+          "default": 10000
+        },
+        "chunk_retry_initial_seconds": {
+          "description": "TH-E-03. Unit: seconds.",
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 30,
+          "default": 2
+        },
+        "chunk_retry_max_seconds": {
+          "description": "TH-E-04. Unit: seconds.",
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 600,
+          "default": 300
+        },
+        "chunk_retry_max_attempts": {
+          "description": "TH-E-05. Unit: attempts per chunk. Exhaustion marks the chunk stalled, not the run failed.",
+          "type": "integer",
+          "minimum": 3,
+          "maximum": 50,
+          "default": 20
+        },
+        "chunk_inactivity_timeout_seconds": {
+          "description": "TH-E-06. Unit: seconds.",
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 600,
+          "default": 120
+        },
+        "session_inactivity_timeout_seconds": {
+          "description": "TH-E-07. Unit: seconds. Session becomes partial, awaiting resume.",
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400,
+          "default": 1800
+        },
+        "completion_deadline_hours": {
+          "description": "TH-E-08. Unit: hours. Clock starts at max(local run end, first control-plane contact after run end) so long offline continuations are not falsely marked incomplete. Expiry yields evidence_status=INCOMPLETE; no PASS, no deletion.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24
+        },
+        "upload_concurrency_per_node": {
+          "description": "TH-E-09. Unit: concurrent uploads per node. Must not starve heartbeat/control traffic.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 4
+        },
+        "manifest_max_bytes": {
+          "description": "TH-E-10. Unit: bytes (4 MiB).",
+          "type": "integer",
+          "minimum": 65536,
+          "maximum": 16777216,
+          "default": 4194304
+        },
+        "partial_is_failure": {
+          "description": "TH-E-11. Fixed false.",
+          "const": false
+        }
+      }
+    },
+    "log_query": {
+      "description": "Whitelisted read-only log query limits. Class: O + H.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_range_hours",
+        "max_bytes",
+        "timeout_seconds",
+        "max_lines",
+        "fragment_bytes",
+        "max_concurrent_per_node",
+        "request_max_bytes",
+        "follow"
+      ],
+      "properties": {
+        "max_range_hours": {
+          "description": "TH-Q-01. Unit: hours. Hard ceiling 168.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24
+        },
+        "max_bytes": {
+          "description": "TH-Q-02. Unit: bytes (8 MiB). Hard ceiling 64 MiB.",
+          "type": "integer",
+          "minimum": 1048576,
+          "maximum": 67108864,
+          "default": 8388608
+        },
+        "timeout_seconds": {
+          "description": "TH-Q-03. Unit: seconds.",
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120,
+          "default": 30
+        },
+        "max_lines": {
+          "description": "TH-Q-04. Unit: lines.",
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 200000,
+          "default": 50000
+        },
+        "fragment_bytes": {
+          "description": "TH-Q-05. Unit: bytes (256 KiB).",
+          "type": "integer",
+          "minimum": 4096,
+          "maximum": 262144,
+          "default": 262144
+        },
+        "max_concurrent_per_node": {
+          "description": "TH-Q-06. Unit: concurrent queries per node.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 5
+        },
+        "request_max_bytes": {
+          "description": "TH-Q-07. Unit: bytes (64 KiB).",
+          "type": "integer",
+          "minimum": 4096,
+          "maximum": 262144,
+          "default": 65536
+        },
+        "follow": {
+          "description": "TH-Q-08. Fixed forbidden: no tail -f / long-hanging snapshots.",
+          "const": "forbidden"
+        }
+      }
+    },
+    "clock_nonce_epoch": {
+      "description": "Clock skew, nonce cache, message TTL and epoch fencing windows. Class: H + O.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_skew_seconds",
+        "emergency_skew_seconds",
+        "max_message_age_seconds",
+        "heartbeat_max_age_seconds",
+        "nonce_cache_seconds",
+        "nonce_entropy_bits",
+        "ttl_job_lease_stop_seconds",
+        "ttl_heartbeat_seconds",
+        "ttl_enrollment_seconds",
+        "epoch_receipt_grace_hours",
+        "monotonic_per_node",
+        "clock_authority"
+      ],
+      "properties": {
+        "max_skew_seconds": {
+          "description": "TH-C-01. Unit: seconds.",
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 180,
+          "default": 120
+        },
+        "emergency_skew_seconds": {
+          "description": "TH-C-02. Unit: seconds. Above this a node stops accepting new jobs; started runs continue at a safe point.",
+          "type": "integer",
+          "minimum": 120,
+          "maximum": 600,
+          "default": 300
+        },
+        "max_message_age_seconds": {
+          "description": "TH-C-03. Unit: seconds.",
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 900,
+          "default": 600
+        },
+        "heartbeat_max_age_seconds": {
+          "description": "TH-C-04. Unit: seconds.",
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 300,
+          "default": 180
+        },
+        "nonce_cache_seconds": {
+          "description": "TH-C-05. Unit: seconds. Hard floor 600.",
+          "type": "integer",
+          "minimum": 600,
+          "maximum": 3600,
+          "default": 900
+        },
+        "nonce_entropy_bits": {
+          "description": "TH-C-06. Unit: bits. Fixed minimum 128.",
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 512,
+          "default": 128
+        },
+        "ttl_job_lease_stop_seconds": {
+          "description": "TH-C-07. Unit: seconds.",
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 600,
+          "default": 300
+        },
+        "ttl_heartbeat_seconds": {
+          "description": "TH-C-08. Unit: seconds.",
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 180,
+          "default": 90
+        },
+        "ttl_enrollment_seconds": {
+          "description": "TH-C-09. Unit: seconds.",
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 600,
+          "default": 300
+        },
+        "epoch_receipt_grace_hours": {
+          "description": "TH-C-10. Unit: hours. Terminal receipts may be recorded idempotently under their original epoch; occupancy and lease are unchanged.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 72,
+          "default": 24
+        },
+        "monotonic_per_node": {
+          "description": "TH-C-11. Fixed true: stale epochs are rejected, never rolled back.",
+          "const": true
+        },
+        "clock_authority": {
+          "description": "TH-C-12. Fixed: the control plane owns time; nodes may not extend leases or accept expired STOPs by local clock.",
+          "const": "control_plane"
+        }
+      }
+    },
+    "task_templates": {
+      "description": "TH-T-01..TH-T-16. Templates are starting points only, never global defaults. Each task revision must explicitly select or customise them and bind the choice in the approval snapshot. No array has a default on purpose: missing selection is SAMPLE_PLAN_UNDEFINED and blocks freezing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_only",
+        "selection_required",
+        "sample_size_templates",
+        "pass_threshold_templates",
+        "retry_budget_templates",
+        "run_budget_templates"
+      ],
+      "properties": {
+        "template_only": {
+          "const": true
+        },
+        "selection_required": {
+          "description": "Missing or unmapped template selection rejects revision freeze.",
+          "const": true
+        },
+        "sample_size_templates": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/sampleSizeTemplate"
+          },
+          "description": "IDs: TH-T-01 smoke_min, TH-T-02 formal_small, TH-T-03 formal_medium, TH-T-04 formal_large, TH-T-05 custom. Values mirrored by the documented table, not enforced as defaults."
+        },
+        "pass_threshold_templates": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/passThresholdTemplate"
+          },
+          "description": "IDs: TH-T-06 strict_zero_failure, TH-T-07 standard_95, TH-T-08 custom. Never a global pass threshold."
+        },
+        "retry_budget_templates": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/retryBudgetTemplate"
+          },
+          "description": "IDs: TH-T-09 retry_minimal, TH-T-10 retry_standard, TH-T-11 retry_extended, TH-T-12 custom."
+        },
+        "run_budget_templates": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/runBudgetTemplate"
+          },
+          "description": "IDs: TH-T-13 budget_small, TH-T-14 budget_medium, TH-T-15 budget_large, TH-T-16 custom."
+        }
+      }
+    },
+    "safety_invariants": {
+      "description": "Hard semantics that no configuration layer may override. A config that violates any of these is CONFIG_OUT_OF_BOUNDS.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lease_expiry_never_releases_device",
+        "heartbeat_loss_never_stops_run",
+        "communication_offline_never_frees_device",
+        "approval_timeout_never_auto_rejects",
+        "approval_timeout_never_auto_approves",
+        "disk_protect_never_deletes_evidence",
+        "spool_protect_never_deletes_evidence",
+        "partial_upload_never_fails_run",
+        "retention_requires_archived_authorized_audited",
+        "unknown_config_fails_closed",
+        "run_override_cannot_change_frozen_boundary",
+        "node_cannot_write_final_verdict"
+      ],
+      "properties": {
+        "lease_expiry_never_releases_device": {
+          "const": true
+        },
+        "heartbeat_loss_never_stops_run": {
+          "const": true
+        },
+        "communication_offline_never_frees_device": {
+          "const": true
+        },
+        "approval_timeout_never_auto_rejects": {
+          "const": true
+        },
+        "approval_timeout_never_auto_approves": {
+          "const": true
+        },
+        "disk_protect_never_deletes_evidence": {
+          "const": true
+        },
+        "spool_protect_never_deletes_evidence": {
+          "const": true
+        },
+        "partial_upload_never_fails_run": {
+          "const": true
+        },
+        "retention_requires_archived_authorized_audited": {
+          "const": true
+        },
+        "unknown_config_fails_closed": {
+          "const": true
+        },
+        "run_override_cannot_change_frozen_boundary": {
+          "const": true
+        },
+        "node_cannot_write_final_verdict": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "description": "UTC RFC3339 with Z.",
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{1,9})?Z$"
+    },
+    "templateId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{2,31}$"
+    },
+    "sampleSizeTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_id",
+        "formal_denominator",
+        "valid_formal_samples",
+        "cases",
+        "iterations",
+        "note"
+      ],
+      "properties": {
+        "template_id": {
+          "enum": [
+            "smoke_min",
+            "formal_small",
+            "formal_medium",
+            "formal_large",
+            "custom"
+          ]
+        },
+        "formal_denominator": {
+          "description": "Whether samples from this template enter the formal denominator.",
+          "type": "boolean"
+        },
+        "valid_formal_samples": {
+          "description": "Valid formal samples; null for smoke (not counted) or custom.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "cases": {
+          "description": "Case count; null for custom.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "iterations": {
+          "description": "Iterations per case; null for custom.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "passThresholdTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_id",
+        "required_pass_ratio",
+        "critical_failures_allowed",
+        "min_valid_samples",
+        "note"
+      ],
+      "properties": {
+        "template_id": {
+          "enum": [
+            "strict_zero_failure",
+            "standard_95",
+            "custom"
+          ]
+        },
+        "required_pass_ratio": {
+          "description": "Ratio of valid formal samples that must pass; null for custom.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "critical_failures_allowed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "min_valid_samples": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "retryBudgetTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_id",
+        "case_retries",
+        "run_retries",
+        "note"
+      ],
+      "properties": {
+        "template_id": {
+          "enum": [
+            "retry_minimal",
+            "retry_standard",
+            "retry_extended",
+            "custom"
+          ]
+        },
+        "case_retries": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20
+        },
+        "run_retries": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 20
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "runBudgetTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_id",
+        "max_duration_minutes",
+        "evidence_budget_bytes",
+        "concurrent_devices",
+        "note"
+      ],
+      "properties": {
+        "template_id": {
+          "enum": [
+            "budget_small",
+            "budget_medium",
+            "budget_large",
+            "custom"
+          ]
+        },
+        "max_duration_minutes": {
+          "description": "Must also respect job_dispatch_stop.max_job_duration_seconds.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "evidence_budget_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "concurrent_devices": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    }
+  }
+}

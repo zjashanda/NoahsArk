@@ -1,0 +1,555 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.noahsark.local/evidence/report-evidence-index.schema.json",
+  "title": "NoahsArk Report Evidence Index v1",
+  "description": "Report-level projection of denominators, run verdicts, evidence availability and device release state. Never replaces raw evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "report_id",
+    "task_id",
+    "revision_id",
+    "generated_at",
+    "generated_by",
+    "denominator_statement",
+    "runs",
+    "evidence_index",
+    "release_index",
+    "access",
+    "report_digest"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "report_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "format": "uuid"
+    },
+    "task_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "revision_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "generated_by": {
+      "type": "string"
+    },
+    "denominator_statement": {
+      "$ref": "#/$defs/denominatorStatement"
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/runEntry"
+      },
+      "minItems": 1
+    },
+    "evidence_index": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidenceEntry"
+      },
+      "default": []
+    },
+    "release_index": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/releaseEntry"
+      },
+      "default": []
+    },
+    "access": {
+      "$ref": "#/$defs/access"
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/unresolved"
+      },
+      "default": []
+    },
+    "redaction": {
+      "$ref": "#/$defs/redaction"
+    },
+    "report_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "static",
+        "smoke",
+        "formal"
+      ],
+      "description": "Run mode is exactly static/smoke/formal (C-01, 2026-10-29). static_check remains only a Job.action / Receipt.job_kind and must not appear here. Compatibility readers may accept it as a read-only alias for static with an audited warning."
+    },
+    "acceptanceLevel": {
+      "type": "string",
+      "enum": [
+        "L0",
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5"
+      ]
+    },
+    "testLevel": {
+      "type": "string",
+      "enum": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6"
+      ]
+    },
+    "denominatorStatement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formal_denominator",
+        "excluded_invalid",
+        "excluded_blocked",
+        "excluded_stopped",
+        "excluded_infra",
+        "smoke_excluded",
+        "statement"
+      ],
+      "properties": {
+        "formal_denominator": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded_invalid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded_blocked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded_stopped": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "excluded_infra": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "smoke_excluded": {
+          "const": true,
+          "description": "Smoke samples never enter the formal denominator."
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Fixed human-readable denominator statement."
+        }
+      }
+    },
+    "verdictRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verdict_id",
+        "verdict_digest"
+      ],
+      "properties": {
+        "verdict_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "verdict_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "manifestRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_id",
+        "manifest_digest"
+      ],
+      "properties": {
+        "manifest_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "manifest_digest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "deviceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "device_id",
+        "endpoints"
+      ],
+      "properties": {
+        "device_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serial": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "firmware": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "runEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "mode",
+        "acceptance_level",
+        "test_level",
+        "manifest_ref",
+        "evidence_status",
+        "decision",
+        "mode_outcome",
+        "denominator_eligible",
+        "release_state"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "acceptance_level": {
+          "$ref": "#/$defs/acceptanceLevel"
+        },
+        "test_level": {
+          "$ref": "#/$defs/testLevel"
+        },
+        "verdict_ref": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/verdictRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "manifest_ref": {
+          "$ref": "#/$defs/manifestRef"
+        },
+        "evidence_status": {
+          "type": "string",
+          "enum": [
+            "COMPLETE",
+            "INCOMPLETE",
+            "CONFLICTED",
+            "UNVERIFIED"
+          ]
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "INVALID",
+            "BLOCKED",
+            "STOPPED",
+            "NEEDS_REVIEW",
+            "NOT_EVALUATED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "mode_outcome": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "STOPPED",
+            "NOT_EVALUATED",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "denominator_eligible": {
+          "type": "boolean"
+        },
+        "device_identity": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/deviceIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "release_state": {
+          "type": "string",
+          "enum": [
+            "not_applicable",
+            "held",
+            "release_requested",
+            "released",
+            "denied",
+            "quarantined",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "evidenceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "evidence_class",
+        "access_level",
+        "state",
+        "locator_kind",
+        "availability",
+        "retention_state"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "evidence_class": {
+          "type": "string",
+          "enum": [
+            "raw_audio",
+            "device_log",
+            "serial_log",
+            "screenshot",
+            "execution_log",
+            "manifest",
+            "receipt",
+            "anomaly_event",
+            "linux_log_read",
+            "human_note"
+          ]
+        },
+        "access_level": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "task_member",
+            "evidence_reader",
+            "system_internal"
+          ]
+        },
+        "content_digest": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "declared",
+            "uploading",
+            "partial",
+            "complete",
+            "verified",
+            "conflicted",
+            "unavailable",
+            "quarantined"
+          ]
+        },
+        "locator_kind": {
+          "type": "string",
+          "enum": [
+            "content_addressed",
+            "node_local",
+            "archive",
+            "on_demand"
+          ]
+        },
+        "availability": {
+          "type": "string",
+          "enum": [
+            "available",
+            "unavailable",
+            "unknown"
+          ]
+        },
+        "retention_state": {
+          "type": "string",
+          "enum": [
+            "not_required",
+            "hot_only",
+            "pending",
+            "archived",
+            "archive_unavailable",
+            "deletion_blocked"
+          ]
+        }
+      }
+    },
+    "releaseEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "occupancy_id",
+        "release_confirmed",
+        "cleanup_receipt_id",
+        "held_reason"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+        "occupancy_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "release_confirmed": {
+          "type": "boolean"
+        },
+        "cleanup_receipt_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "format": "uuid"
+        },
+        "held_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_visibility",
+        "raw_material_requires"
+      ],
+      "properties": {
+        "default_visibility": {
+          "const": "summary_and_index"
+        },
+        "raw_material_requires": {
+          "const": "evidence_reader"
+        }
+      }
+    },
+    "unresolved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "description",
+        "owner",
+        "blocking"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "blocking": {
+          "type": "boolean"
+        }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "applied",
+        "redacted_paths"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string"
+        },
+        "applied": {
+          "type": "boolean"
+        },
+        "redacted_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

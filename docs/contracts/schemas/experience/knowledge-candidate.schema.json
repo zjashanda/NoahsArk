@@ -1,0 +1,687 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/contracts/experience/knowledge-candidate.schema.json",
+  "title": "NoahsArk Knowledge Candidate",
+  "description": "任务经验与知识候选。每次任务结束（正常完成、人工停止、阻断或安全停止）都必须从本次任务提取并保存候选；自动保存不等于已验证或已推广。候选只能由有权限的人审阅后推广，任何频率、重复次数或代理生成都不能触发自动合入。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_id",
+    "status",
+    "created_at",
+    "created_by",
+    "source",
+    "classification",
+    "content",
+    "applicability",
+    "evidence_refs",
+    "review",
+    "promotion",
+    "dedupe",
+    "status_history",
+    "access_level",
+    "ui"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "x-ui-visibility": "ui-safe"
+    },
+    "candidate_id": {
+      "$ref": "#/$defs/identifier",
+      "x-ui-visibility": "ui-safe"
+    },
+    "status": {
+      "enum": [
+        "PROPOSED",
+        "UNDER_REVIEW",
+        "NEEDS_INFO",
+        "APPROVED",
+        "REJECTED",
+        "PROMOTED",
+        "DUPLICATE",
+        "SUPERSEDED",
+        "WITHDRAWN"
+      ],
+      "description": "候选生命周期。PROPOSED 为自动提取后的未复核状态；PROMOTED 只表示已生成知识条目，不表示条目永久有效。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "created_at": {
+      "$ref": "#/$defs/timestamp",
+      "x-ui-visibility": "ui-safe"
+    },
+    "created_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_type", "actor_id", "role"],
+      "properties": {
+        "actor_type": {
+          "enum": ["AGENT", "SYSTEM", "HUMAN"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "actor_id": { "$ref": "#/$defs/identifier" },
+        "role": {
+          "enum": [
+            "OBSERVER",
+            "TERMINAL_OPERATOR",
+            "SESSION_MANAGER",
+            "SUPER_ADMIN",
+            "SYSTEM",
+            "AGENT"
+          ],
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "revision_id",
+        "run_id",
+        "run_mode",
+        "terminal_state",
+        "project_id",
+        "node_id",
+        "device_id",
+        "device_identity",
+        "firmware_version",
+        "config_version",
+        "bundle_id",
+        "occurred_at"
+      ],
+      "description": "候选必须可追溯到原任务、修订、运行、设备与证据；不得出现无来源候选。",
+      "properties": {
+        "task_id": { "$ref": "#/$defs/identifier" },
+        "revision_id": { "$ref": "#/$defs/identifier" },
+        "run_id": { "$ref": "#/$defs/identifier" },
+        "run_mode": {
+          "enum": ["STATIC", "SMOKE", "FORMAL", "MIXED", "UNKNOWN"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "terminal_state": {
+          "enum": ["COMPLETED", "STOPPED", "BLOCKED", "FAILED", "UNKNOWN"],
+          "description": "正常完成、人工停止、阻断或安全停止都必须触发经验提取。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "project_id": { "$ref": "#/$defs/identifier" },
+        "node_id": { "$ref": "#/$defs/identifier" },
+        "device_id": { "$ref": "#/$defs/identifier" },
+        "device_identity": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "firmware_version": {
+          "anyOf": [
+            { "type": "string", "maxLength": 120 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "config_version": {
+          "anyOf": [
+            { "type": "string", "maxLength": 120 },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "bundle_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "occurred_at": { "$ref": "#/$defs/timestamp" }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_category", "capability", "tags"],
+      "properties": {
+        "record_category": {
+          "enum": [
+            "NORMAL",
+            "ANOMALY",
+            "FALSE_POSITIVE",
+            "REMEDIATION",
+            "RETEST",
+            "PROCEDURE",
+            "MIXED",
+            "OTHER"
+          ],
+          "description": "知识库同时积累正常、异常、误报、处置、修复和复测经验；不得只收录成功案例。",
+          "x-ui-visibility": "ui-safe"
+        },
+        "capability": {
+          "enum": [
+            "WAKE",
+            "COMMAND",
+            "FREESPEECH",
+            "ASR",
+            "CONTINUOUS",
+            "PLAYBACK",
+            "NETWORK",
+            "DEVICE_OPERATION",
+            "OTHER",
+            "UNKNOWN"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "uniqueItems": true,
+          "maxItems": 64,
+          "x-ui-visibility": "ui-safe"
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "observation",
+        "expected_outcome",
+        "actual_outcome",
+        "proposed_guidance",
+        "limitations"
+      ],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "observation": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "expected_outcome": {
+          "anyOf": [
+            { "type": "string", "maxLength": 2000 },
+            { "type": "null" }
+          ]
+        },
+        "actual_outcome": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "proposed_guidance": {
+          "anyOf": [
+            { "type": "string", "maxLength": 4000 },
+            { "type": "null" }
+          ]
+        },
+        "limitations": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 },
+          "maxItems": 32
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "project_ids",
+        "hardware_models",
+        "device_identities",
+        "firmware_versions",
+        "config_versions",
+        "lstest_versions",
+        "capabilities",
+        "conditions",
+        "exclusions",
+        "verified_in_environment"
+      ],
+      "description": "适用条件必须显式。未复核或条件不符的经验只能作为线索，不得自动改变脚本、阈值或判据。",
+      "properties": {
+        "scope": {
+          "enum": [
+            "TASK_ONLY",
+            "PROJECT",
+            "HARDWARE_MODEL",
+            "TOOL",
+            "CROSS_PROJECT",
+            "UNKNOWN"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "project_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "hardware_models": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "uniqueItems": true
+        },
+        "device_identities": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "uniqueItems": true
+        },
+        "firmware_versions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "uniqueItems": true
+        },
+        "config_versions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "uniqueItems": true
+        },
+        "lstest_versions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "uniqueItems": true
+        },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "uniqueItems": true
+        },
+        "conditions": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 },
+          "maxItems": 64
+        },
+        "exclusions": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 },
+          "maxItems": 64
+        },
+        "verified_in_environment": { "type": "boolean" }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "kind", "digest", "access_level", "relation"],
+        "properties": {
+          "evidence_id": { "$ref": "#/$defs/identifier" },
+          "kind": {
+            "enum": [
+              "AUDIO",
+              "SERIAL_LOG",
+              "TOOL_LOG",
+              "RUN_MANIFEST",
+              "RESULT_CSV",
+              "CASES_CSV",
+              "SCREENSHOT",
+              "TOOL_EVIDENCE",
+              "OTHER"
+            ],
+            "x-ui-visibility": "ui-safe"
+          },
+          "digest": { "$ref": "#/$defs/sha256" },
+          "access_level": { "$ref": "#/$defs/accessLevel" },
+          "relation": {
+            "enum": ["SUPPORTS", "CONTRADICTS", "CONTEXT"],
+            "x-ui-visibility": "ui-safe"
+          }
+        }
+      },
+      "description": "证据引用只保存身份、摘要和访问级别，不内嵌原始内容。",
+      "x-ui-visibility": "ui-safe"
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reviewer_id",
+        "reviewer_role",
+        "reviewed_at",
+        "decision",
+        "rationale",
+        "conditions"
+      ],
+      "properties": {
+        "state": {
+          "enum": ["NOT_REVIEWED", "IN_REVIEW", "NEEDS_INFO", "REVIEWED"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "reviewer_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "reviewer_role": {
+          "anyOf": [
+            {
+              "enum": [
+                "OBSERVER",
+                "TERMINAL_OPERATOR",
+                "SESSION_MANAGER",
+                "SUPER_ADMIN",
+                "SYSTEM",
+                "NONE"
+              ]
+            },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "reviewed_at": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "decision": {
+          "enum": ["PENDING", "APPROVE", "REJECT", "DEFER", "MERGE_DUPLICATE"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "rationale": {
+          "anyOf": [
+            { "type": "string", "maxLength": 2000 },
+            { "type": "null" }
+          ]
+        },
+        "conditions": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 500 },
+          "maxItems": 32
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "automatic_allowed",
+        "requires_human_review",
+        "target",
+        "required_permission",
+        "decision",
+        "decided_by",
+        "decided_at",
+        "promoted_knowledge_item_id",
+        "promotion_event_id"
+      ],
+      "description": "推广决策。automatic_allowed 与 requires_human_review 是 V0.0.1 硬约束，不允许运行期覆盖。",
+      "properties": {
+        "automatic_allowed": { "const": false },
+        "requires_human_review": { "const": true },
+        "target": {
+          "enum": ["COMMON_KB", "TOOL_KB", "ANOMALY_RULE", "NONE"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "required_permission": {
+          "enum": [
+            "KNOWLEDGE_MERGE_COMMON",
+            "KNOWLEDGE_MERGE_TOOL",
+            "KNOWLEDGE_PROMOTE_ANOMALY",
+            "NONE"
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "decision": {
+          "enum": ["PENDING", "APPROVED", "REJECTED", "DEFERRED"],
+          "x-ui-visibility": "ui-safe"
+        },
+        "decided_by": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "decided_at": {
+          "anyOf": [
+            { "$ref": "#/$defs/timestamp" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "promoted_knowledge_item_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "promotion_event_id": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "dedupe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dedupe_key", "duplicate_of", "related_candidate_ids", "similarity_checked"],
+      "properties": {
+        "dedupe_key": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "duplicate_of": {
+          "anyOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ],
+          "x-ui-visibility": "ui-safe"
+        },
+        "related_candidate_ids": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/identifier" },
+          "uniqueItems": true
+        },
+        "similarity_checked": { "type": "boolean" }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "status_history": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status", "at", "actor_id", "reason_code"],
+        "properties": {
+          "status": {
+            "enum": [
+              "PROPOSED",
+              "UNDER_REVIEW",
+              "NEEDS_INFO",
+              "APPROVED",
+              "REJECTED",
+              "PROMOTED",
+              "DUPLICATE",
+              "SUPERSEDED",
+              "WITHDRAWN"
+            ]
+          },
+          "at": { "$ref": "#/$defs/timestamp" },
+          "actor_id": { "$ref": "#/$defs/identifier" },
+          "reason_code": { "type": "string", "minLength": 1, "maxLength": 120 }
+        }
+      },
+      "x-ui-visibility": "ui-safe"
+    },
+    "access_level": {
+      "$ref": "#/$defs/accessLevel",
+      "x-ui-visibility": "ui-safe"
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["warning_badges", "can_review", "can_promote", "display_note"],
+      "properties": {
+        "warning_badges": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "UNREVIEWED",
+              "STALE",
+              "CONFLICT",
+              "LOW_EVIDENCE",
+              "SOURCE_RESTRICTED",
+              "DUPLICATE"
+            ]
+          },
+          "uniqueItems": true,
+          "x-ui-visibility": "ui-safe"
+        },
+        "can_review": { "type": "boolean" },
+        "can_promote": { "type": "boolean" },
+        "display_note": { "type": "string", "maxLength": 300 }
+      },
+      "x-ui-visibility": "ui-safe"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "PROPOSED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "review": {
+            "properties": {
+              "state": { "enum": ["NOT_REVIEWED", "IN_REVIEW"] },
+              "decision": { "const": "PENDING" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "PROMOTED" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "promotion": {
+            "properties": {
+              "decision": { "const": "APPROVED" },
+              "promoted_knowledge_item_id": { "$ref": "#/$defs/identifier" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "enum": ["PROPOSED", "UNDER_REVIEW", "NEEDS_INFO"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "promotion": {
+            "properties": {
+              "promoted_knowledge_item_id": { "type": "null" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "promotion": {
+            "properties": { "decision": { "const": "APPROVED" } },
+            "required": ["decision"]
+          }
+        },
+        "required": ["promotion"]
+      },
+      "then": {
+        "properties": {
+          "promotion": {
+            "properties": {
+              "decided_by": { "$ref": "#/$defs/identifier" },
+              "decided_at": { "$ref": "#/$defs/timestamp" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "DUPLICATE" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "dedupe": {
+            "properties": { "duplicate_of": { "$ref": "#/$defs/identifier" } }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "accessLevel": {
+      "enum": [
+        "PUBLIC_SUMMARY",
+        "SUMMARY_INDEX",
+        "TASK_AUTHORIZED",
+        "EVIDENCE_AUTHORIZED",
+        "ADMIN_ONLY",
+        "DENY"
+      ]
+    }
+  },
+  "x-ui-field-policy": {
+    "authority": "authoritative-candidate",
+    "ui_safe": [
+      "candidate_id",
+      "status",
+      "created_at",
+      "created_by.actor_type",
+      "created_by.role",
+      "source",
+      "classification",
+      "content",
+      "applicability",
+      "evidence_refs",
+      "review",
+      "promotion",
+      "dedupe",
+      "status_history",
+      "access_level",
+      "ui"
+    ],
+    "restricted": [
+      "content.observation when source evidence is EVIDENCE_AUTHORIZED",
+      "content.actual_outcome when source evidence is EVIDENCE_AUTHORIZED"
+    ],
+    "server_only": [
+      "created_by.actor_id",
+      "review.reviewer_id",
+      "promotion.decided_by",
+      "promotion.promotion_event_id",
+      "status_history.actor_id"
+    ],
+    "never_expose": [
+      "raw_audio",
+      "raw_log_text",
+      "secrets",
+      "credentials",
+      "pii",
+      "absolute_storage_paths"
+    ]
+  }
+}

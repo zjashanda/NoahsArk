@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.invalid/contracts/domain/lease.schema.json",
+  "title": "NoahsArk Lease",
+  "description": "Device exclusivity, epoch and release preconditions. expires_at is a renewal deadline only: it never releases occupancy, stops a started run or makes a device idle. Contract version 1.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "lease_id",
+    "node_id",
+    "device_id",
+    "endpoint_set",
+    "task_id",
+    "revision_id",
+    "run_id",
+    "epoch",
+    "state",
+    "occupancy_state",
+    "communication_state",
+    "execution_permit",
+    "acquired_at",
+    "expires_at",
+    "release_preconditions",
+    "version",
+    "idempotency_key"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "lease_id": { "$ref": "#/$defs/uuid" },
+    "node_id": { "$ref": "#/$defs/uuid" },
+    "device_id": { "$ref": "#/$defs/uuid" },
+    "endpoint_set": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Legacy field name (C-04, 2026-10-29): domain v1 values are endpoint_kind capability classes. The wire lease.endpoint_set and the occupancy key (node_id, device_id, endpoint_set) are endpoint identity sets (endpoint_<32hex>). Kind values never serve as identity. The structural rename/split is deferred to a 2.0 candidate; readers must apply the ordinary/alias mapping in security-node.md §19.2.",
+      "items": {
+        "type": "string",
+        "enum": ["audio_capture", "audio_playback", "serial", "usb", "gpio"]
+      }
+    },
+    "task_id": { "$ref": "#/$defs/uuid" },
+    "revision_id": { "$ref": "#/$defs/uuid" },
+    "run_id": { "$ref": "#/$defs/uuid" },
+    "job_id": { "$ref": "#/$defs/uuid" },
+    "epoch": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Increments on re-acquire or reconciliation. Old epochs may be retained as history but never regain execution authority."
+    },
+    "state": {
+      "type": "string",
+      "enum": ["GRANTED", "HELD", "RELEASING", "RECLAIM_PENDING", "RELEASED", "QUARANTINED"],
+      "description": "RECLAIM_PENDING means communication is lost and occupancy awaits reconciliation; it is not a release."
+    },
+    "occupancy_state": {
+      "type": "string",
+      "enum": ["OCCUPIED", "RELEASING", "IDLE"]
+    },
+    "communication_state": {
+      "type": "string",
+      "enum": ["ONLINE", "STALE", "OFFLINE"],
+      "description": "Visibility only. OFFLINE while OCCUPIED is valid and expected for offline continuation."
+    },
+    "execution_permit": {
+      "type": "string",
+      "enum": ["GRANTED", "NOT_GRANTED", "SUSPENDED"],
+      "description": "An already-started run keeps GRANTED while communication is OFFLINE."
+    },
+    "acquired_at": { "$ref": "#/$defs/timestamp" },
+    "renewed_at": { "$ref": "#/$defs/timestamp" },
+    "expires_at": {
+      "$ref": "#/$defs/timestamp",
+      "description": "Renewal deadline only. Expiry never releases occupancy, stops a started run or triggers reassignment."
+    },
+    "last_heartbeat_at": { "$ref": "#/$defs/timestamp" },
+    "release_preconditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["local_stop_confirmed", "safe_cleanup_done", "occupancy_reconciled"],
+      "properties": {
+        "local_stop_confirmed": { "type": "boolean" },
+        "safe_cleanup_done": { "type": "boolean" },
+        "occupancy_reconciled": { "type": "boolean" }
+      }
+    },
+    "released_at": { "$ref": "#/$defs/timestamp" },
+    "release_reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "reclaim_reason": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "error_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "maxLength": 100
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optimistic concurrency version."
+    },
+    "idempotency_key": { "$ref": "#/$defs/idempotency_key" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "state": { "enum": ["GRANTED", "HELD", "RECLAIM_PENDING"] } },
+        "required": ["state"]
+      },
+      "then": { "properties": { "occupancy_state": { "const": "OCCUPIED" } } }
+    },
+    {
+      "if": {
+        "properties": { "state": { "const": "RELEASING" } },
+        "required": ["state"]
+      },
+      "then": { "properties": { "occupancy_state": { "const": "RELEASING" } } }
+    },
+    {
+      "if": {
+        "properties": { "state": { "const": "RELEASED" } },
+        "required": ["state"]
+      },
+      "then": {
+        "properties": {
+          "occupancy_state": { "const": "IDLE" },
+          "release_preconditions": {
+            "properties": {
+              "local_stop_confirmed": { "const": true },
+              "safe_cleanup_done": { "const": true },
+              "occupancy_reconciled": { "const": true }
+            }
+          }
+        },
+        "required": ["released_at"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "state": { "const": "RECLAIM_PENDING" } },
+        "required": ["state"]
+      },
+      "then": {
+        "properties": { "communication_state": { "enum": ["STALE", "OFFLINE"] } }
+      }
+    },
+    {
+      "if": {
+        "properties": { "state": { "const": "QUARANTINED" } },
+        "required": ["state"]
+      },
+      "then": {
+        "properties": { "occupancy_state": { "const": "OCCUPIED" } }
+      }
+    }
+  ],
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9_.:-]+$"
+    }
+  }
+}
