@@ -26,3 +26,10 @@
 
 - 不声称生产可用、正式认证完成、TCL 验收通过或 RPO/RTO 已演练。
 - 不授权跳过人工审批、证据复核或 Phase 6 验收。
+
+## 联网核对修正（2026-10-29）
+
+- 类型检查：采用 **mypy + pydantic.mypy**，不采用 pyright（Pydantic 官方插件支持更完整）。
+- Windows 服务：采用 **pywin32** 为主，NSSM 仅作简化部署备选（NSSM 多年未更新，pywin32 仍维护）。
+- TLS/反代：维持 **Caddy**。
+- 依据与来源：`docs/delivery/evidence/adr-research-20261029.md`。
