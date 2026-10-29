@@ -43,9 +43,9 @@ app = FastAPI(
 )
 
 app.middleware("http")(correlation_middleware)
-app.add_exception_handler(ApiError, api_error_handler)
-app.add_exception_handler(StarletteHTTPException, http_error_handler)
-app.add_exception_handler(RequestValidationError, validation_error_handler)
+app.add_exception_handler(ApiError, api_error_handler)  # type: ignore[arg-type]
+app.add_exception_handler(StarletteHTTPException, http_error_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RequestValidationError, validation_error_handler)  # type: ignore[arg-type]
 
 app.include_router(health_router)
 app.include_router(mission_router, prefix=settings.api_prefix)

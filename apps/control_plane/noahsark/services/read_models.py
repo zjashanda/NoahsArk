@@ -230,7 +230,7 @@ async def _get_report_by_identifier(session: AsyncSession, identifier: str) -> R
 # ---------------------------------------------------------------------------
 # Projection helpers
 # ---------------------------------------------------------------------------
-def _axes(source: Run | Attempt | None) -> dict[str, str]:
+def _axes(source: Run | Attempt | Verdict | None) -> dict[str, str]:
     if source is None:
         return {field: "UNKNOWN" for field in AXIS_FIELDS}
     return {field: getattr(source, field) for field in AXIS_FIELDS}
@@ -1605,7 +1605,7 @@ async def list_devices(
     items = []
     for device in page:
         node = node_map.get(device.node_id)
-        lease = lease_map.get(device.current_lease_id)
+        lease = lease_map.get(device.current_lease_id) if device.current_lease_id else None
         release = _release(lease)
         items.append(
             {

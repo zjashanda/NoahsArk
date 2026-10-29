@@ -7,6 +7,7 @@ control-plane data from UI fixtures without inspecting individual fields.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -101,7 +102,7 @@ async def validation_error_handler(
     return JSONResponse(status_code=400, content=error_body(request, api_exc))
 
 
-def _safe_validation_errors(errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _safe_validation_errors(errors: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     cleaned: list[dict[str, Any]] = []
     for item in errors:
         cleaned.append(
