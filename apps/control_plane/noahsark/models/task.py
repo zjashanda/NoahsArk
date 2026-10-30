@@ -75,6 +75,9 @@ class TaskRevision(Base, SchemaVersionMixin, ProvenanceMixin, CreatedAtMixin):
     change_kind: Mapped[str] = mapped_column(String(32), nullable=False)
     change_reason: Mapped[str | None] = mapped_column(Text)
     origin: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    content: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     immutable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     content_digest: Mapped[str] = mapped_column(String(80), nullable=False)

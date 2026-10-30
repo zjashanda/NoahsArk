@@ -1034,6 +1034,8 @@ SEED_TABLES: list[tuple[str, Iterable[dict[str, Any]]]] = [
     # Empty on purpose: W3 write requests must never be seeded, but ``--reset``
     # must truncate them so write tests start from a clean slate.
     ("write_requests", []),
+    # Sessions are runtime-only; ``--reset`` clears them.
+    ("sessions", []),
 ]
 
 RESET_ORDER = [name for name, _ in reversed(SEED_TABLES)]

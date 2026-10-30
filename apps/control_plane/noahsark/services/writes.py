@@ -35,6 +35,7 @@ from ..models import (
     User,
     WriteRequest,
 )
+from . import audit
 
 ACTIVE_RUN_STATES = frozenset({"CREATED", "DISPATCHED", "RUNNING", "FINISHING"})
 FROZEN_REVISION_STATES = frozenset({"FROZEN"})
@@ -132,19 +133,8 @@ async def execute_idempotent(
 
 
 # ---------------------------------------------------------------------------
-# Audit (append-only)
+# Audit (append-only) -- delegated to the hash-chain service
 # ---------------------------------------------------------------------------
-async def _last_event_hash(session: AsyncSession) -> str | None:
-    return (
-        await session.execute(
-            select(AuditEvent.event_hash)
-            .where(AuditEvent.event_hash.is_not(None))
-            .order_by(AuditEvent.occurred_at.desc(), AuditEvent.event_id.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
-
-
 async def append_audit(
     session: AsyncSession,
     *,
@@ -159,32 +149,10 @@ async def append_audit(
     correlation_id: str | None,
     path: str,
 ) -> AuditEvent:
-    occurred_at = datetime.now(UTC)
-    prev_hash = await _last_event_hash(session)
-    event_id = f"aud-{occurred_at:%Y%m%d%H%M%S}-{uuid.uuid4().hex[:10]}"
-    event_hash = "sha256:" + hashlib.sha256(
-        json.dumps(
-            {
-                "event_id": event_id,
-                "occurred_at": occurred_at.isoformat(),
-                "actor_role": actor_role,
-                "action": action,
-                "object_type": object_type,
-                "object_id": object_id,
-                "before": before,
-                "after": after,
-                "reason": reason,
-                "prev_event_hash": prev_hash,
-            },
-            sort_keys=True,
-            default=str,
-        ).encode("utf-8")
-    ).hexdigest()
-    event = AuditEvent(
-        event_id=event_id,
-        occurred_at=occurred_at,
-        actor_id=actor_id,
+    return await audit.append_event(
+        session,
         actor_role=actor_role,
+        actor_id=actor_id,
         action=action,
         object_type=object_type,
         object_id=object_id,
@@ -192,18 +160,8 @@ async def append_audit(
         after=after,
         reason=reason,
         correlation_id=correlation_id,
-        correlation={"path": path, "append_only": True},
-        access_decision="ALLOW",
-        result="SUCCESS",
-        integrity="HASH_CHAIN_OK",
-        prev_event_hash=prev_hash,
-        event_hash=event_hash,
-        created_at=occurred_at,
-        source="control-plane",
-        seed=False,
+        path=path,
     )
-    session.add(event)
-    return event
 
 
 async def resolve_actor_id(

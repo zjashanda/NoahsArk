@@ -11,7 +11,7 @@ from .evidence import (
     Report,
     Verdict,
 )
-from .identity import Agent, Review, Role, Setting, User
+from .identity import Agent, Review, Role, SessionToken, Setting, User
 from .intake import IntakeDraft
 from .run import Attempt, Run
 from .task import Approval, Case, Gate, Task, TaskRevision
@@ -38,6 +38,7 @@ __all__ = [
     "Review",
     "Role",
     "Run",
+    "SessionToken",
     "Setting",
     "Task",
     "TaskRevision",

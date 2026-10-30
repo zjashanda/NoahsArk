@@ -39,3 +39,18 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         )
     async with _session_factory() as session:
         yield session
+
+
+async def get_optional_session() -> AsyncIterator[AsyncSession | None]:
+    """Session dependency for auth paths.
+
+    Header-based identity must keep working without a database, so this yields
+    ``None`` when no PostgreSQL URL is configured.  Session-token validation
+    then fails closed in the provider instead of silently trusting headers.
+    """
+
+    if _session_factory is None:
+        yield None
+        return
+    async with _session_factory() as session:
+        yield session

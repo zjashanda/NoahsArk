@@ -1,21 +1,24 @@
-"""Development identity dependencies.
+"""FastAPI identity dependencies.
 
-Role headers are a scaffold, not authentication: they are parsed server-side so
-unknown roles fail closed.  Read endpoints run for every valid role.  W3 writes
-use the capability allow-list below, which denies by default and therefore never
-trusts a client-supplied role beyond the four known role codes.
+Authentication is delegated to ``services.auth`` providers.  The default
+``dev_headers`` mode keeps the pre-W1 header contract: a blank role means
+OBSERVER, an unknown role fails closed with 403.  A supplied session token is
+always validated server-side and can never be downgraded to its header claims.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Header
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import settings
+from ..db import get_optional_session
 from ..domain.permissions import Capability, ensure_capability
 from ..errors import forbidden
+from ..services.auth import Credentials, Principal, build_provider
 
 ROLE_OBSERVER = "OBSERVER"
 ROLE_APPROVER = "APPROVER"
@@ -53,34 +56,30 @@ ROLE_CAPABILITIES: dict[str, frozenset[str]] = {
 }
 
 
-@dataclass(frozen=True)
-class Principal:
-    role: str
-    actor: str | None
-    header_role: str | None
-
-    @property
-    def is_observer(self) -> bool:
-        return self.role == ROLE_OBSERVER
-
-
 async def get_principal(
     x_noahsark_role: str | None = Header(default=None, alias="X-NoahsArk-Role"),
     x_noahsark_actor: str | None = Header(default=None, alias="X-NoahsArk-Actor"),
+    x_noahsark_session: str | None = Header(default=None, alias="X-NoahsArk-Session"),
+    session: Annotated[AsyncSession | None, Depends(get_optional_session)] = None,
 ) -> Principal:
-    raw = x_noahsark_role.strip().upper() if x_noahsark_role else ROLE_OBSERVER
-    role = raw or ROLE_OBSERVER
-    if role not in VALID_ROLES:
-        raise forbidden(
-            f"Unknown role header {x_noahsark_role!r}; expected one of "
-            + ", ".join(sorted(VALID_ROLES)),
-            details={"header": "X-NoahsArk-Role", "valid_roles": sorted(VALID_ROLES)},
-        )
-    return Principal(role=role, actor=x_noahsark_actor, header_role=x_noahsark_role)
+    provider = build_provider(
+        settings.auth_mode,
+        issuer=settings.oidc_issuer,
+        audience=settings.oidc_audience,
+        jwks_url=settings.oidc_jwks_url,
+    )
+    return await provider.authenticate(
+        Credentials(
+            role_header=x_noahsark_role,
+            actor_header=x_noahsark_actor,
+            session_token=x_noahsark_session,
+        ),
+        session,
+    )
 
 
 def require_roles(*allowed: str) -> Callable:
-    """Reusable dependency factory for future writes (W3).  Default deny."""
+    """Reusable dependency factory for future writes.  Default deny."""
 
     allowed_set = frozenset(allowed)
 

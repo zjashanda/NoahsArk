@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -90,6 +91,30 @@ class Review(Base, SchemaVersionMixin, ProvenanceMixin, CreatedAtMixin):
     consensus: Mapped[str] = mapped_column(String(32), nullable=False)
     open_risks: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SessionToken(Base, ProvenanceMixin, CreatedAtMixin):
+    """Server-side session record.
+
+    Only a SHA-256 hash of the bearer token is persisted.  The plaintext token
+    is returned once at issuance and never stored, logged or audited.
+    """
+
+    __tablename__ = "sessions"
+
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)
+    actor: Mapped[str | None] = mapped_column(String(200))
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    role_code: Mapped[str] = mapped_column(String(32), nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_reason: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        CheckConstraint("expires_at > issued_at", name="expiry_after_issue"),
+    )
 
 
 class Setting(Base, SchemaVersionMixin, ProvenanceMixin):

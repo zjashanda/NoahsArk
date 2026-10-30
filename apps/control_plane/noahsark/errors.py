@@ -43,6 +43,27 @@ def forbidden(message: str, *, details: dict[str, Any] | None = None) -> ApiErro
     return ApiError(403, "FORBIDDEN", message, retryable=False, details=details)
 
 
+def unauthorized(
+    message: str,
+    *,
+    code: str = "UNAUTHENTICATED",
+    details: dict[str, Any] | None = None,
+) -> ApiError:
+    """Authentication failure.  Always fail closed: no anonymous fallback."""
+
+    return ApiError(401, code, message, retryable=False, details=details)
+
+
+def audit_immutable(operation: str) -> ApiError:
+    return ApiError(
+        405,
+        "AUDIT_IMMUTABLE",
+        "Audit events are append-only; corrections must be new compensating events",
+        retryable=False,
+        details={"operation": operation, "append_only": True},
+    )
+
+
 def validation_error(
     message: str, *, details: dict[str, Any] | None = None
 ) -> ApiError:
