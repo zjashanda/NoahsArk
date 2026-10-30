@@ -43,6 +43,7 @@ from ..models import (
     User,
     Verdict,
 )
+from . import domain_rules
 
 ACTIVE_RUN_STATES = frozenset({"CREATED", "DISPATCHED", "RUNNING", "FINISHING"})
 AXIS_FIELDS = (
@@ -246,38 +247,30 @@ def _preconditions(lease: Lease | None) -> dict[str, bool]:
     }
 
 
-def _release(lease: Lease | None) -> dict[str, Any]:
-    """Derive release_state from the three stored preconditions.
+def _release(
+    lease: Lease | None,
+    run: Run | None = None,
+    node: Node | None = None,
+    *,
+    on_site_confirmed: bool = False,
+) -> dict[str, Any]:
+    """Derive release_state from preconditions + cleanup receipt + R-05.
 
     PASS and release are independent: this projection never consults a
-    verdict.  A missing lease means the release concept does not apply.
+    verdict.  A missing cleanup receipt only blocks release confirmation and
+    keeps the device OCCUPIED; it never turns the device IDLE and never means
+    the evidence chain itself is incomplete.
     """
 
-    preconditions = _preconditions(lease)
-    all_met = all(preconditions.values())
-    if lease is None:
-        state = "not_applicable"
-    elif lease.state == "QUARANTINED":
-        state = "quarantined"
-    elif lease.state == "RELEASED" or lease.released_at is not None:
-        state = "released"
-    elif lease.state in ("RELEASING", "RECLAIM_PENDING"):
-        state = "release_requested"
-    elif all_met and lease.occupancy_state == "IDLE":
-        state = "released"
-    else:
-        state = "held"
+    projection = domain_rules.lease_release_projection(
+        lease, run=run, node=node, on_site_confirmed=on_site_confirmed
+    )
     return {
-        "release_state": state,
-        "preconditions": preconditions,
-        "preconditions_met": all_met,
+        **projection,
+        "leased": lease is not None,
         "lease_id": _uid(lease.lease_id) if lease is not None else None,
-        "lease_state": lease.state if lease is not None else None,
-        "lease_epoch": lease.epoch if lease is not None else None,
-        "released_at": _iso(lease.released_at) if lease is not None else None,
-        # Release is derived only from lease state + the three preconditions.
-        # It is deliberately independent of business_verdict / formal PASS.
-        "independent_of_verdict": True,
+        "released_at": _iso(projection["released_at"]),
+        "missing": list(projection["missing"]),
     }
 
 
@@ -352,6 +345,14 @@ def _run_dict(run: Run) -> dict[str, Any]:
 
 def _attempt_dict(attempt: Attempt) -> dict[str, Any]:
     axes = _axes(attempt)
+    eligibility_reasons = domain_rules.attempt_denominator_reasons(
+        run_mode=attempt.run_mode,
+        evidence_origin=attempt.evidence_origin,
+        validity_status=attempt.validity_status,
+        evidence_status=attempt.evidence_status,
+        execution_status=attempt.execution_status,
+        failure_classification=attempt.failure_classification,
+    )
     return {
         "attempt_id": _uid(attempt.attempt_id),
         "display_id": attempt.display_id,
@@ -364,6 +365,12 @@ def _attempt_dict(attempt: Attempt) -> dict[str, Any]:
         "axes": axes,
         "evidence_origin": attempt.evidence_origin,
         "denominator_eligible": attempt.denominator_eligible,
+        "denominator_eligible_computed": not eligibility_reasons,
+        "denominator_ineligible_reasons": eligibility_reasons,
+        "denominator_eligible_matches_stored": (
+            not eligibility_reasons
+        ) == bool(attempt.denominator_eligible),
+        "attempt_is_separate_record": True,
         "retry_of_attempt_id": _uid(attempt.retry_of_attempt_id),
         "flaky_suspect": attempt.flaky_suspect,
         "node_id": _uid(attempt.node_id),
@@ -657,43 +664,85 @@ def _candidate_dict(candidate: KnowledgeCandidate) -> dict[str, Any]:
 
 
 def _node_dict(node: Node) -> dict[str, Any]:
+    interactive_session = dict(node.interactive_session or {})
+    spool = dict(node.spool or {})
     return {
         "node_id": _uid(node.node_id),
         "display_id": node.display_id,
         "hostname": node.hostname,
+        "agent_version": node.agent_version,
+        "os": dict(node.os or {}),
+        "runtime": dict(node.runtime or {}),
         "communication_state": node.communication_state,
         "status": node.status,
         "last_heartbeat_at": _iso(node.last_heartbeat_at),
         "heartbeat_interval_seconds": node.heartbeat_interval_seconds,
-        "interactive_session": node.interactive_session,
-        "spool": node.spool,
+        "interactive_session": interactive_session,
+        "interactive_session_available": (
+            str(interactive_session.get("state", "")).upper() == "AVAILABLE"
+        ),
+        "work_dir": dict(node.work_dir or {}),
+        "spool": spool,
+        "spool_state": spool.get("state"),
         "capabilities": list(node.capabilities or []),
+        "endpoint_ids": list(node.endpoint_ids or []),
+        "quarantine_reason": node.quarantine_reason,
+        "draining_reason": node.draining_reason,
+        "error_code": node.error_code,
+        "is_offline": node.communication_state in ("STALE", "OFFLINE"),
+        "offline_is_idle": False,
         "updated_at": _iso(node.updated_at),
     }
 
 
 def _device_dict(device: Device) -> dict[str, Any]:
+    availability = domain_rules.device_availability(
+        pool_state=device.pool_state,
+        health_state=device.health_state,
+        communication_state=device.communication_state,
+        occupancy_state=device.occupancy_state,
+    )
     return {
         "device_id": _uid(device.device_id),
         "display_id": device.display_id,
         "node_id": _uid(device.node_id),
+        "identity": dict(device.identity or {}),
+        "capabilities": list(device.capabilities or []),
+        "endpoints": list(device.endpoints or []),
+        "firmware_version": device.firmware_version,
+        "config_digest": device.config_digest,
+        "adapter_version": device.adapter_version,
+        "project_scope": list(device.project_scope or []),
         "pool_state": device.pool_state,
         "health_state": device.health_state,
         "communication_state": device.communication_state,
         "occupancy_state": device.occupancy_state,
         "current_lease_id": _uid(device.current_lease_id),
-        "firmware_version": device.firmware_version,
+        "equivalence": dict(device.equivalence) if device.equivalence else None,
+        "provenance": dict(device.provenance or {}),
         "last_seen_at": _iso(device.last_seen_at),
+        "quarantine_reason": device.quarantine_reason,
+        "draining_reason": device.draining_reason,
+        "error_code": device.error_code,
+        "availability": availability,
+        "available": availability["available"],
         "updated_at": _iso(device.updated_at),
     }
 
 
-def _lease_dict(lease: Lease) -> dict[str, Any]:
+def _lease_dict(
+    lease: Lease,
+    run: Run | None = None,
+    node: Node | None = None,
+    device: Device | None = None,
+) -> dict[str, Any]:
+    signals = domain_rules.lease_signal_projection(lease, run=run, device=device)
     return {
         "lease_id": _uid(lease.lease_id),
         "display_id": lease.display_id,
         "node_id": _uid(lease.node_id),
         "device_id": _uid(lease.device_id),
+        "endpoint_set": list(lease.endpoint_set or []),
         "task_id": _uid(lease.task_id),
         "revision_id": _uid(lease.revision_id),
         "run_id": _uid(lease.run_id),
@@ -703,7 +752,9 @@ def _lease_dict(lease: Lease) -> dict[str, Any]:
         "communication_state": lease.communication_state,
         "execution_permit": lease.execution_permit,
         "release_preconditions": _preconditions(lease),
-        "release": _release(lease),
+        "release": _release(lease, run, node),
+        "signals": signals,
+        "offline_while_active": signals["offline_while_active"],
         "acquired_at": _iso(lease.acquired_at),
         "expires_at": _iso(lease.expires_at),
         "last_heartbeat_at": _iso(lease.last_heartbeat_at),
@@ -850,7 +901,10 @@ async def _progress(
                 .join(Run, Run.run_id == Attempt.run_id)
                 .where(
                     Run.task_id == task.task_id,
-                    Attempt.run_mode == "formal",
+                    Attempt.run_mode == domain_rules.DENOMINATOR_RUN_MODE,
+                    Attempt.evidence_origin == domain_rules.DENOMINATOR_EVIDENCE_ORIGIN,
+                    Attempt.validity_status == "VALID",
+                    Attempt.evidence_status == "COMPLETE",
                     Attempt.execution_status == "COMPLETED",
                     Attempt.denominator_eligible.is_(True),
                 )
@@ -858,19 +912,11 @@ async def _progress(
         ).scalar_one()
         or 0
     )
-    mode = "COUNTS" if total > 0 else "INDETERMINATE"
-    percent = None
-    if mode == "COUNTS" and total > 0:
-        bounded = min(max(completed / total, 0.0), 1.0)
-        percent = round(bounded * 100, 1)
-    return {
-        "mode": mode,
-        "denominator_kind": "APPROVED_CASE_COUNT",
-        "completed": completed if total > 0 else None,
-        "total": total,
-        "percent": percent,
-        "percent_label": "已完成正式用例占比" if percent is not None else None,
-    }
+    return domain_rules.progress_projection(
+        completed=completed if total > 0 else None,
+        total=total,
+        denominator_kind="APPROVED_CASE_COUNT",
+    )
 
 
 async def _task_summary(session: AsyncSession, task: Task) -> dict[str, Any]:
@@ -879,8 +925,11 @@ async def _task_summary(session: AsyncSession, task: Task) -> dict[str, Any]:
         revision = await session.get(TaskRevision, task.current_revision_id)
     run = await _select_active_run(session, task.task_id)
     lease = await _select_lease(session, task.task_id, run)
+    node = await session.get(Node, run.node_id) if run and run.node_id else None
+    if node is None and lease is not None:
+        node = await session.get(Node, lease.node_id)
     axes = _axes(run)
-    release = _release(lease)
+    release = _release(lease, run, node)
     counts = await _evidence_counts(session, task.task_id)
     progress = await _progress(
         session, task, revision.revision_id if revision is not None else None

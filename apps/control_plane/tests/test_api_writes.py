@@ -299,7 +299,7 @@ def test_release_capability_records_request_without_releasing(
         # the read projection must stay held even with all preconditions met.
         device = client.get("/api/v1/devices/dev-tcl-001").json()["data"]
         assert device["occupancy_state"] == "OCCUPIED"
-        assert device["release_state"] == "held"
+        assert device["release_state"] == "held_pending_cleanup"
         assert device["release"]["independent_of_verdict"] is True
 
         verdict = client.get("/api/v1/tasks/tsk-voice-001/verdict").json()["data"]
