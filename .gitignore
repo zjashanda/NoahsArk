@@ -29,6 +29,19 @@ apps/control_plane/.env
 ssh.txt
 .playwright-mcp/
 
+# node inventory: decrypted or plaintext connection material must stay local
+config/node-inventory/*.dec.yaml
+config/node-inventory/*.plain.yaml
+config/node-inventory/*.tmp.*
+config/node-inventory/local/
+
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+apps/control_plane/var/
+apps/control_plane/.env.bak.*
+design/ui-app/install/*.zip
+design/ui-app/install/*.tgz
+design/ui-app/debug/
+design/ui-app/debug-task.html
