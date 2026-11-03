@@ -2,6 +2,7 @@
 // The real control-plane API is opt-in via ?api=1 or localStorage.naa-api=1.
 
 import { currentRole } from "./roles.js";
+import { sessionHeader } from "./auth-session.js";
 
 const MODE_KEY = "naa-api";
 
@@ -21,7 +22,9 @@ export function isApiMode() {
   const params = new URLSearchParams(window.location.search);
   if (params.get("api") === "1") return true;
   if (params.get("api") === "0") return false;
-  return window.localStorage.getItem(MODE_KEY) === "1";
+  // The NoahsArk platform is API-backed by default. Fixture mode is opt-in
+  // via ?api=0 or the data-source selector.
+  return window.localStorage.getItem(MODE_KEY) !== "0";
 }
 
 export function setApiMode(enabled) {
@@ -41,6 +44,7 @@ export async function apiFetch(path, options = {}) {
   const base = getApiBase().replace(/\/+$/, "");
   const url = `${base}/api/v1${path}`;
   const role = currentRole();
+  const session = sessionHeader();
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), options.timeout ?? 4000);
   try {
@@ -48,17 +52,21 @@ export async function apiFetch(path, options = {}) {
       method: options.method || "GET",
       headers: {
         Accept: "application/json",
-        "X-NoahsArk-Role": role.id,
-        "X-NoahsArk-Actor": `demo-${role.id.toLowerCase()}`,
+        ...session,
+        ...(Object.keys(session).length ? {} : {
+          "X-NoahsArk-Role": role.id,
+          "X-NoahsArk-Actor": `demo-${role.id.toLowerCase()}`
+        }),
         ...(options.body ? { "Content-Type": "application/json" } : {}),
         ...(options.idempotencyKey ? { "Idempotency-Key": options.idempotencyKey } : {}),
         ...(options.headers || {})
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
+      credentials: "same-origin",
       signal: controller.signal
     });
-    const payload = await response.json().catch(() => null);
     if (!response.ok) {
+      const payload = await response.json().catch(() => null);
       return {
         ok: false,
         status: response.status,
@@ -69,6 +77,10 @@ export async function apiFetch(path, options = {}) {
         }
       };
     }
+    if (options.responseType === "blob") {
+      return { ok: true, status: response.status, payload: await response.blob() };
+    }
+    const payload = await response.json().catch(() => null);
     return { ok: true, status: response.status, payload };
   } catch (error) {
     return {
@@ -98,6 +110,46 @@ export function apiPost(path, body, options = {}) {
     body,
     idempotencyKey: options.idempotencyKey || newIdempotencyKey()
   });
+}
+
+// PATCH shares the POST header/idempotency path for partial topology updates.
+export function apiPatch(path, body, options = {}) {
+  return apiFetch(path, {
+    ...options,
+    method: "PATCH",
+    body,
+    idempotencyKey: options.idempotencyKey || newIdempotencyKey()
+  });
+}
+
+// DELETE has no body and no Idempotency-Key requirement; it keeps the same
+// role/session header path as the read and write helpers.
+export function apiDelete(path, options = {}) {
+  return apiFetch(path, { ...options, method: "DELETE" });
+}
+
+// Supervisor read model for one task. Kept beside endpointForRoute so callers
+// never build control-plane paths themselves.
+export function supervisorEndpoint(taskId) {
+  const id = String(taskId || "").trim();
+  if (!id) return null;
+  return `/tasks/${encodeURIComponent(id)}/supervisor`;
+}
+
+// Task deletion path. Kept beside the other task endpoints so pages do not
+// assemble control-plane URLs themselves.
+export function taskDeleteEndpoint(taskId) {
+  const id = String(taskId || "").trim();
+  if (!id) return null;
+  return `/tasks/${encodeURIComponent(id)}`;
+}
+
+// Bound task conversation. Reads and follow-up writes share one path so the
+// page never assembles control-plane URLs itself.
+export function sessionMessagesEndpoint(taskId) {
+  const id = String(taskId || "").trim();
+  if (!id) return null;
+  return `/tasks/${encodeURIComponent(id)}/session/messages`;
 }
 
 // Route ID -> read endpoint. Kept in one place so W4 can wire pages incrementally.

@@ -41,7 +41,7 @@
     {
       "id": "TK-02",
       "path": "/console/tasks/:taskId/overview",
-      "title": "Task Overview",
+      "title": "Task conversation",
       "area": "TK",
       "family": "tasks"
     },

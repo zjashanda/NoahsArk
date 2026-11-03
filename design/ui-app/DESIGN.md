@@ -52,7 +52,7 @@ Font stacks: `-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text"
 
 ## 6. Primitives inventory
 
-App shell (fixed sidebar, topbar, content); nav item; page header; section; card/panel; data table; definition list; axis strip (5 axes); evidence row (`expected` / `received` / `verified`); gate chip; state banner (`offline` / `stale` / `unknown` / `blocked` / `partial` / `reconciling` / `draining` / `quarantined`); status badge; empty state; timeline; inspector panel; button; segmented control; toast-free inline feedback.
+App shell (fixed sidebar, topbar, content); nav item; page header; section; card/panel; **task card grid** (1/2/3 responsive columns); **node card with nested device list**; data table; definition list; axis strip (5 axes); evidence row (`expected` / `received` / `verified`); gate chip; state banner (`offline` / `stale` / `unknown` / `blocked` / `partial` / `reconciling` / `draining` / `quarantined`); status badge; empty state; timeline; inspector panel; button; segmented control; toast-free inline feedback.
 
 The axis strip never collapses the five axes. Evidence keeps expected, received, and verified distinct. Node-observed facts and Linux platform judgment remain separate. Disabled actions retain a visible reason.
 
@@ -60,7 +60,8 @@ The axis strip never collapses the five axes. Evidence keeps expected, received,
 
 - One scroll owner: the main content. Sidebar, topbar, and mobile navigation remain fixed.
 - The shell is `100dvh`; all contained flex/grid children use `min-height: 0` to preserve the single scroll owner.
-- **≥1200px:** full fixed sidebar with the eight primary entries and Operations group.
+- Workspace navigation exposes exactly four areas: 任务 (Tasks), 节点管理 (Nodes), 报告 (Reports), 知识库 (Knowledge). Other registered areas stay reachable by route but never appear in the workspace nav.
+- **≥1200px:** full fixed sidebar with the four workspace entries only.
 - **1024–1199px:** compact icon rail with expandable labels.
 - **768–1023px:** icon rail plus overlay drawer; detail content becomes single-column.
 - **<768px:** five-item bottom bar (Mission Control, Tasks, Runs, Devices, More) plus a More sheet.
@@ -78,4 +79,6 @@ Provide a skip link, landmark regions, visible `:focus-visible` rings, and `aria
 - Mock fixtures only; no persistence and no authentication.
 - RT/AG write actions are disabled with a visible reason because their access decision remains pending.
 - No i18n and no charts.
+- Node creation and device add/edit/delete entries are visible but blocked because the control plane exposes no write endpoints for them.
+- Task list is a responsive card grid; task detail is the conversation (history + composer), with no separate Session tab.
 - Static projection only: no backend, real execution, authority writes, or acceptance evidence.

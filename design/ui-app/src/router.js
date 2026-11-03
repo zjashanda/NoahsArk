@@ -7,10 +7,10 @@ export function normalizePath(raw) {
     ? (typeof window !== "undefined" ? window.location.hash : "")
     : raw;
   if (value.startsWith("#")) value = value.slice(1);
-  if (!value || !value.startsWith("/")) value = "/console";
+  if (!value || !value.startsWith("/")) value = "/console/tasks";
   if (value.startsWith("/aitest")) value = `/console${value.slice("/aitest".length)}`;
   const path = value.split("?")[0].replace(/\/+$/, "");
-  return path || "/console";
+  return path || "/console/tasks";
 }
 
 function compile(pattern) {
@@ -60,8 +60,17 @@ export function navigate(path, options = {}) {
 }
 
 export function currentRoute() {
-  const path = normalizePath();
-  return { path, ...(matchRoute(path) || { route: null, params: {} }) };
+  const raw = typeof window !== "undefined" ? window.location.hash : "";
+  const value = raw.startsWith("#") ? raw.slice(1) : raw;
+  const queryIndex = value.indexOf("?");
+  const query = queryIndex >= 0 ? new URLSearchParams(value.slice(queryIndex + 1)) : null;
+  const path = normalizePath(value);
+  const matched = matchRoute(path) || { route: null, params: {} };
+  const params = { ...(matched.params || {}) };
+  if (query) {
+    for (const [key, item] of query.entries()) params[key] = item;
+  }
+  return { path, route: matched.route, params };
 }
 
 export function onRouteChange(handler) {

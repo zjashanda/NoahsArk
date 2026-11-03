@@ -131,10 +131,10 @@ export const WORLD = {
     { id: "att-105", run_id: "run-039", ordinal: 1, retry_of: null, status: "COMPLETED", started_at: "2026-10-29 12:52:11 +08:00", ended_at: "2026-10-29 13:04:47 +08:00", flaky_suspect: false, node_observed: { heartbeat: "2026-10-29 13:04:46 +08:00", last_step: "smoke_complete", local_state: "COMPLETED", used_for_decision: false } }
   ],
   devices: [
-    { id: "dev-tcl-001", label: "TCL001", identity: "ListenAIVCOM", pool_state: "ASSIGNED", health_state: "HEALTHY", serial_masked: "TCL…001", firmware: "V038", current_lease_id: "lease-7781", epoch: 7 },
-    { id: "dev-tcl-002", label: "TCL002", identity: "ListenAIVCOM", pool_state: "AVAILABLE", health_state: "HEALTHY", serial_masked: "TCL…002", firmware: "V038", current_lease_id: null, epoch: 0 },
-    { id: "dev-tcl-003", label: "TCL003", identity: "ListenAIVCOM", pool_state: "QUARANTINED", health_state: "QUARANTINED", serial_masked: "TCL…003", firmware: "V037", current_lease_id: "lease-7790", epoch: 4 },
-    { id: "dev-tcl-004", label: "TCL004", identity: "ListenAIVCOM", pool_state: "DRAINING", health_state: "HEALTHY", serial_masked: "TCL…004", firmware: "V038", current_lease_id: "lease-7792", epoch: 2 }
+    { id: "dev-tcl-001", node_id: "node-lab-win-01", label: "TCL001", identity: "ListenAIVCOM", pool_state: "ASSIGNED", health_state: "HEALTHY", serial_masked: "TCL…001", firmware: "V038", current_lease_id: "lease-7781", epoch: 7, communication_state: "ONLINE", occupancy_state: "OCCUPIED" },
+    { id: "dev-tcl-002", node_id: "node-lab-win-01", label: "TCL002", identity: "ListenAIVCOM", pool_state: "AVAILABLE", health_state: "HEALTHY", serial_masked: "TCL…002", firmware: "V038", current_lease_id: null, epoch: 0, communication_state: "ONLINE", occupancy_state: "IDLE" },
+    { id: "dev-tcl-003", node_id: "node-lab-win-02", label: "TCL003", identity: "ListenAIVCOM", pool_state: "QUARANTINED", health_state: "QUARANTINED", serial_masked: "TCL…003", firmware: "V037", current_lease_id: "lease-7790", epoch: 4, communication_state: "OFFLINE", occupancy_state: "OCCUPIED" },
+    { id: "dev-tcl-004", node_id: "node-lab-win-02", label: "TCL004", identity: "ListenAIVCOM", pool_state: "DRAINING", health_state: "HEALTHY", serial_masked: "TCL…004", firmware: "V038", current_lease_id: "lease-7792", epoch: 2, communication_state: "ONLINE", occupancy_state: "OCCUPIED" }
   ],
   nodes: [
     { id: "node-lab-win-01", label: "实验室 Windows 节点 A", communication_state: "ONLINE", interactive_session: "ACTIVE", spool_state: "DRAINING", spool_pending: 2, last_heartbeat_at: "2026-10-29 14:06:19 +08:00", endpoints: ["Endpoint A · 串口", "Endpoint B · 音频采集"] },
@@ -207,7 +207,94 @@ export const WORLD = {
       { id: "drf-008", title: "噪声场景补充", entry_mode: "CONVERSATION", stage: "REVIEW", sources: 2, conflicts: 0, gaps: 1, updated_at: "2026-10-29 10:18 +08:00", owner_role: "Submitter" },
       { id: "drf-007", title: "串口恢复脚本", entry_mode: "FILE", stage: "DRAFT", sources: 4, conflicts: 2, gaps: 3, updated_at: "2026-10-28 17:44 +08:00", owner_role: "Submitter" }
     ]
-  }
+  },
+  // Demo-only test campaigns.  These are clearly tagged DEMO in the page and
+  // never stand in for a control-plane response: API mode reads
+  // GET /api/v1/test-campaigns and shows its failures instead of these rows.
+  campaigns: [
+    {
+      campaign_id: "demo-campaign-pass",
+      demo: true,
+      node_id: "node-lab-win-01",
+      scenario: "wake-recognition",
+      rounds: 5,
+      bench: "tcl003.json",
+      title: "TCL003 · 5 轮唤醒演示",
+      status: "SUCCEEDED",
+      command_status: "SUCCEEDED",
+      command_id: "demo-command-pass",
+      command: { command_id: "demo-command-pass", tool_id: "test.run", status: "SUCCEEDED", exit_code: 0, error_code: null, truncated: false },
+      summary: {
+        outcome: "COMPLETED",
+        completed_rounds: 5,
+        target_rounds: 5,
+        normal_window: { rounds: 5, recognized: 5, failed: 0, status_counts: { RECOGNIZED: 5 } },
+        status_counts: { RECOGNIZED: 5 }
+      },
+      round_rows: [
+        { round: 1, status: "RECOGNIZED", source: "summary_final.json", derived: true },
+        { round: 2, status: "RECOGNIZED", source: "summary_final.json", derived: true },
+        { round: 3, status: "RECOGNIZED", source: "summary_final.json", derived: true },
+        { round: 4, status: "RECOGNIZED", source: "summary_final.json", derived: true },
+        { round: 5, status: "RECOGNIZED", source: "summary_final.json", derived: true }
+      ],
+      artifacts: {
+        result_dir: "demo\\result\\20261031_222748_wake_recognition",
+        summary_path: "demo\\result\\20261031_222748_wake_recognition\\summary_final.json"
+      },
+      notes: ["ROUNDS_DERIVED_FROM_SUMMARY"],
+      error_code: null,
+      created_at: "2026-10-31T14:27:48Z",
+      started_at: "2026-10-31T14:27:48Z",
+      finished_at: "2026-10-31T14:29:53Z"
+    },
+    {
+      campaign_id: "demo-campaign-running",
+      demo: true,
+      node_id: "node-lab-win-01",
+      scenario: "wake-recognition",
+      rounds: 489,
+      bench: "tcl003.json",
+      title: "TCL003 · 长稳演示（进行中）",
+      status: "RUNNING",
+      command_status: "SENT",
+      command_id: "demo-command-running",
+      command: { command_id: "demo-command-running", tool_id: "test.run", status: "SENT", exit_code: null, error_code: null, truncated: false },
+      summary: null,
+      round_rows: [],
+      artifacts: {},
+      notes: [],
+      error_code: null,
+      created_at: "2026-11-01T23:56:34Z",
+      started_at: "2026-11-01T23:56:34Z",
+      finished_at: null
+    },
+    {
+      campaign_id: "demo-campaign-failed",
+      demo: true,
+      node_id: "node-lab-win-01",
+      scenario: "wake-recognition",
+      rounds: 489,
+      bench: "tcl003.json",
+      title: "TCL003 · 长稳演示（失败）",
+      status: "FAILED",
+      command_status: "FAILED",
+      command_id: "demo-command-failed",
+      command: { command_id: "demo-command-failed", tool_id: "test.run", status: "FAILED", exit_code: 2, error_code: "TOOL_EXIT_NONZERO", truncated: false },
+      summary: null,
+      round_rows: [],
+      artifacts: {
+        result_dir: "demo\\result\\20261101_075520_wake_recognition",
+        rounds_path: "demo\\result\\20261101_075520_wake_recognition\\rounds.csv",
+        summary_path: "demo\\result\\20261101_075520_wake_recognition\\summary_final.json"
+      },
+      notes: ["SUMMARY_TOO_LARGE", "ARTIFACT_PATHS_ONLY"],
+      error_code: "SUMMARY_TOO_LARGE",
+      created_at: "2026-10-31T23:55:12Z",
+      started_at: "2026-10-31T23:55:12Z",
+      finished_at: "2026-11-01T02:53:42Z"
+    }
+  ]
 };
 
 function linkState(flags) {

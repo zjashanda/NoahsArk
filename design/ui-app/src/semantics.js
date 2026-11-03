@@ -145,3 +145,131 @@ export function disabledReasonForOperation(area) {
   }
   return "原型只读：未连接服务端，写操作不生效。";
 }
+
+// ---------------------------------------------------------------------------
+// Test campaign outcome
+// ---------------------------------------------------------------------------
+//
+// A campaign is not a Task and is not one of the five formal axes.  Its
+// outcome is a display projection over the deterministic test result:
+//
+// * FAILED / TIMEOUT / STOPPED never become PASS, even if a stale summary
+//   happens to contain pass tokens.
+// * RUNNING never becomes PASS while the node is still executing.
+// * PASS is derived only from an explicit verdict, or from SUCCEEDED plus a
+//   complete summary whose status_counts account for every requested round and
+//   contain only pass tokens (for wake-recognition the pass token is
+//   RECOGNIZED).
+// * A missing/oversized summary stays "verdict not provided" instead of being
+//   inferred into a success.
+
+const CAMPAIGN_PASS_TOKENS = new Set([
+  "PASS", "PASSED", "SUCCESS", "SUCCEEDED", "OK", "RECOGNIZED"
+]);
+const CAMPAIGN_FAIL_TOKENS = new Set([
+  "FAIL", "FAILED", "ERROR", "ERRORED", "TIMEOUT", "REJECTED",
+  "UNRECOGNIZED", "NO_RECOGNITION", "MISS"
+]);
+const CAMPAIGN_ACTIVE_STATUSES = new Set(["QUEUED", "SENT", "RUNNING"]);
+const CAMPAIGN_FAILURE_STATUSES = new Set(["FAILED", "TIMEOUT", "STOPPED"]);
+
+function count(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : fallback;
+}
+
+function campaignCounts(campaign) {
+  const summary = campaign && typeof campaign.summary === "object" && campaign.summary
+    ? campaign.summary
+    : {};
+  const raw = campaign && typeof campaign.status_counts === "object" && campaign.status_counts
+    ? campaign.status_counts
+    : summary.status_counts;
+  return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+}
+
+export function campaignOutcome(campaign) {
+  const source = campaign && typeof campaign === "object" ? campaign : {};
+  const status = String(source.status || "").toUpperCase();
+  const explicit = String(source.verdict || "").toUpperCase();
+  // Lifecycle wins over a stale/incorrect verdict: a FAILED or RUNNING campaign
+  // is never promoted to PASS by an explicit summary field.
+  if (CAMPAIGN_ACTIVE_STATUSES.has(status)) {
+    return {
+      verdict: null,
+      label: "进行中",
+      tone: "action",
+      derived: false,
+      basis: `命令 ${source.command_status || status}`
+    };
+  }
+  if (CAMPAIGN_FAILURE_STATUSES.has(status)) {
+    return {
+      verdict: "FAIL",
+      label: "FAIL",
+      tone: "danger",
+      derived: false,
+      basis: source.error_code || source.command_status || status
+    };
+  }
+  if (explicit === "PASS" || explicit === "FAIL") {
+    return {
+      verdict: explicit,
+      label: explicit,
+      tone: explicit === "PASS" ? "success" : "danger",
+      derived: false,
+      basis: source.verdict_basis || "服务端 verdict"
+    };
+  }
+  if (status === "SUCCEEDED") {
+    const counts = campaignCounts(source);
+    const total = count(
+      source.total_rounds,
+      count(source.expected_rounds, count(source.rounds, 0))
+    );
+    const completed = count(
+      source.completed_rounds,
+      count(source.rounds_count, 0)
+    );
+    let passCount = 0;
+    let failCount = 0;
+    for (const [key, value] of Object.entries(counts)) {
+      const token = String(key || "").toUpperCase();
+      const amount = count(value, 0);
+      if (CAMPAIGN_PASS_TOKENS.has(token)) passCount += amount;
+      if (CAMPAIGN_FAIL_TOKENS.has(token)) failCount += amount;
+    }
+    if (total > 0 && completed === total && failCount === 0 && passCount === total) {
+      return {
+        verdict: "PASS",
+        label: "PASS",
+        tone: "success",
+        derived: true,
+        basis: `summary.status_counts ${passCount}/${total}`
+      };
+    }
+    if (total > 0 && failCount > 0) {
+      return {
+        verdict: "FAIL",
+        label: "FAIL",
+        tone: "danger",
+        derived: true,
+        basis: `summary.status_counts FAIL ${failCount}/${total}`
+      };
+    }
+    return {
+      verdict: null,
+      label: "判定未提供",
+      tone: "neutral",
+      derived: false,
+      basis: "命令 SUCCEEDED；summary 未给出完整逐轮计数"
+    };
+  }
+  return {
+    verdict: null,
+    label: status || "UNKNOWN",
+    tone: axisTone(status),
+    derived: false,
+    basis: source.error_code || "状态未知"
+  };
+}

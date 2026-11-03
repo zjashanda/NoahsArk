@@ -1,10 +1,10 @@
 // Application shell: persistent candidate ribbon, sidebar, topbar, mobile nav.
 
-import { AREAS, OPERATIONS_AREAS, PRIMARY_AREAS, areaEntryPath } from "./route-manifest.js";
+import { AREAS, WORKSPACE_NAV_AREAS, areaEntryPath } from "./route-manifest.js";
 import { icon } from "./icons.js";
 import { SCENARIOS } from "./fixtures.js";
 import { esc } from "./components.js";
-import { ROLES, getRoleId } from "./roles.js";
+import { ROLES, getRoleId, isAuthoritativePrincipal } from "./roles.js";
 import { getLang } from "./i18n.js";
 import { isApiMode } from "./api.js";
 
@@ -21,24 +21,20 @@ function navItem(area, activeArea, counts) {
   const meta = AREAS[area];
   const count = counts[area];
   const current = area === activeArea ? ' aria-current="page"' : "";
-  return `<a class="nav-item" href="#${areaEntryPath(area)}" data-area="${area}" data-nav aria-label="${esc(meta.label)}"${current}>
+  const label = meta.navLabel || meta.label;
+  return `<a class="nav-item" href="#${areaEntryPath(area)}" data-area="${area}" data-nav aria-label="${esc(label)}"${current}>
     ${icon(meta.icon, "nav-icon")}
-    <span class="nav-label">${esc(meta.label)}</span>
+    <span class="nav-label">${esc(label)}</span>
     ${count ? `<span class="nav-count" aria-label="${count} 项需要处理">${count}</span>` : ""}
   </a>`;
 }
 
 export function navMarkup(activeArea, counts) {
-  const primary = PRIMARY_AREAS.map((area) => navItem(area, activeArea, counts)).join("");
-  const operations = OPERATIONS_AREAS.map((area) => navItem(area, activeArea, counts)).join("");
+  const workspace = WORKSPACE_NAV_AREAS.map((area) => navItem(area, activeArea, counts)).join("");
   return `
     <div class="nav-group">
       <div class="nav-group-label">工作区</div>
-      ${primary}
-    </div>
-    <div class="nav-group">
-      <div class="nav-group-label">Operations</div>
-      ${operations}
+      ${workspace}
     </div>
   `;
 }
@@ -75,6 +71,7 @@ function roleOptions() {
 function demoControls(view, prefix) {
   const lang = getLang();
   const api = isApiMode();
+  const authoritative = isAuthoritativePrincipal();
   return `
     <div class="demo-controls">
       <div class="demo-mode">
@@ -90,12 +87,12 @@ function demoControls(view, prefix) {
         <select id="scenario-select-${prefix}" aria-label="状态 fixture 预览">${scenarioOptions(view)}</select>
       </label>
       <label class="demo-control"><span>角色</span>
-        <select id="role-select-${prefix}" aria-label="演示角色">${roleOptions()}</select>
+        <select id="role-select-${prefix}" aria-label="${authoritative ? "服务端会话角色" : "演示角色"}"${authoritative ? " disabled" : ""}>${roleOptions()}</select>
       </label>
       <button class="demo-lang" type="button" data-action="lang" aria-label="Switch language">
         ${lang === "zh" ? "EN · English" : "中文 · Chinese"}
       </button>
-      <p class="demo-note">${api ? "API 模式：失败显式报错，不回退 fixture。" : "客户端角色演示，不构成访问控制。"}</p>
+      <p class="demo-note">${authoritative ? "权限来自服务端会话；浏览器不显示凭据。" : api ? "API 模式：失败显式报错，不回退 fixture；角色选择仅用于开发头。" : "客户端角色演示，不构成访问控制。"}</p>
     </div>
   `;
 }
@@ -119,7 +116,7 @@ export function renderShell(view, activeArea) {
       </div>
 
       <aside class="sidebar" aria-label="主导航">
-        <a class="brand" href="#/console" aria-label="NoahsArk 控制台首页">
+        <a class="brand" href="#/console/tasks" aria-label="NoahsArk 控制台首页">
           <img class="brand-mark" src="./favicon.svg" alt="">
           <span class="brand-name"><strong>NoahsArk</strong><span>Console · Cloudline</span></span>
         </a>
@@ -140,7 +137,7 @@ export function renderShell(view, activeArea) {
           <button class="icon-button" id="theme-toggle" type="button" data-action="theme" aria-label="切换浅色或深色主题" title="切换浅色/深色">
             ${icon("moon")}
           </button>
-          <a class="btn btn-primary" href="#/console/intake/new" aria-label="新建任务">${icon("plus")}<span>新建任务</span></a>
+          <a class="btn btn-primary" href="#/console/tasks" aria-label="新建任务">${icon("plus")}<span>新建任务</span></a>
         </header>
 
         <main id="main-content" class="content" tabindex="-1">
@@ -150,11 +147,8 @@ export function renderShell(view, activeArea) {
     </div>
 
     <nav class="mobile-nav" aria-label="移动导航">
-      <a href="#/console" data-area="MC" ${activeArea === "MC" ? 'aria-current="page"' : ""}>${icon("mission")}<span>Mission</span></a>
-      <a href="#/console/tasks" data-area="TK" ${activeArea === "TK" ? 'aria-current="page"' : ""}>${icon("tasks")}<span>Tasks</span></a>
-      <a href="#/console/runs" data-area="RN" ${activeArea === "RN" ? 'aria-current="page"' : ""}>${icon("runs")}<span>Runs</span></a>
-      <a href="#/console/devices" data-area="DV" ${activeArea === "DV" ? 'aria-current="page"' : ""}>${icon("devices")}<span>Devices</span></a>
-      <button type="button" data-action="open-more" aria-controls="more-sheet" aria-expanded="false">${icon("menu")}<span>More</span></button>
+      ${WORKSPACE_NAV_AREAS.map((area) => `<a href="#${areaEntryPath(area)}" data-area="${area}" ${activeArea === area ? 'aria-current="page"' : ""}>${icon(AREAS[area].icon)}<span>${esc(AREAS[area].navLabel || AREAS[area].label)}</span></a>`).join("")}
+      <button type="button" data-action="open-more" aria-controls="more-sheet" aria-expanded="false">${icon("menu")}<span>更多</span></button>
     </nav>
 
     <div class="nav-drawer" id="nav-drawer" hidden>

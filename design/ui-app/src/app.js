@@ -1,14 +1,25 @@
 // Application bootstrap and event wiring.
 
 import { currentScenario, setScenarioId, view } from "./fixtures.js";
-import { currentRoute, normalizePath, onRouteChange } from "./router.js";
+import { currentRoute, navigate, normalizePath, onRouteChange } from "./router.js";
 import { renderShell } from "./shell.js";
 import { icon } from "./icons.js";
 import { esc, kv, pageHeader, panel, stateBlock } from "./components.js";
 import { applyLanguage, getLang, setLang, t } from "./i18n.js";
-import { currentRole, setRoleId } from "./roles.js";
-import { setApiMode } from "./api.js";
-import { loadRouteView } from "./data-source.js";
+import { currentRole, isAuthoritativePrincipal, setRoleId } from "./roles.js";
+import { isApiMode, setApiMode } from "./api.js";
+import {
+  createTask,
+  demoSessionMessages,
+  demoSupervisor,
+  isLiveRoute,
+  loadRouteView,
+  loadTaskSessionMessages,
+  loadTaskSupervisor,
+  loadTestCampaign,
+  loadTestCampaigns,
+  titleFromDescription
+} from "./data-source.js";
 import { adaptRouteView } from "./api-adapter.js";
 
 import * as mission from "./pages/mission.js?v=2";
@@ -30,6 +41,9 @@ let lastTrigger = null;
 let feedbackTimer = null;
 let rendered = false;
 let renderToken = 0;
+let liveRefreshTimer = null;
+let pageCleanup = null;
+const LIVE_REFRESH_MS = 10000;
 
 function resolvedTheme() {
   const stored = window.localStorage.getItem(THEME_KEY);
@@ -64,6 +78,10 @@ function toggleLanguage() {
 }
 
 function changeRole(value) {
+  if (isAuthoritativePrincipal()) {
+    showFeedback(getLang() === "en" ? "The active server session controls permissions." : "当前服务端会话控制权限，不能切换开发角色。");
+    return;
+  }
   setRoleId(value);
   mount({ focus: false });
   const role = currentRole();
@@ -127,10 +145,12 @@ function apiErrorPanel(info, result) {
       title: "控制面数据不可用",
       description: `读取 <span class="mono">${esc(result.endpoint || info.route.id)}</span> 失败。API 模式不会静默回退到 fixture，页面保留失败事实与重试入口。`
     })}
+    <div role="alert" aria-live="assertive">
     ${stateBlock("error", {
       title: `API 请求失败 · ${error.code || "ERROR"}`,
       note: error.message || "控制面请求未成功。"
     })}
+    </div>
     ${panel({
       title: "请求事实",
       note: "失败不会被渲染为空数据或成功；切换到 fixture 是显式操作",
@@ -148,7 +168,49 @@ function apiErrorPanel(info, result) {
   `;
 }
 
+// The task detail payload already names the execution node; surface it so the
+// campaign trigger can default to the task's own node instead of guessing.
+function taskNodeFromResult(result) {
+  const data = result && result.payload && typeof result.payload === "object"
+    ? result.payload.data
+    : null;
+  if (!data || typeof data !== "object") return null;
+  const context = data.execution_context && typeof data.execution_context === "object"
+    ? data.execution_context
+    : {};
+  const contextNodes = Array.isArray(context.nodes) ? context.nodes : [];
+  if (contextNodes.length) {
+    const node = contextNodes[0] || {};
+    return {
+      id: node.node_id ? String(node.node_id) : null,
+      display_id: node.display_id || node.hostname ? String(node.display_id || node.hostname) : null
+    };
+  }
+  const resources = data.task_card && data.task_card.resources && typeof data.task_card.resources === "object"
+    ? data.task_card.resources
+    : {};
+  if (resources.node_id || resources.node_display_id) {
+    return {
+      id: resources.node_id ? String(resources.node_id) : null,
+      display_id: resources.node_display_id ? String(resources.node_display_id) : null
+    };
+  }
+  return null;
+}
+
+function teardownPage() {
+  if (pageCleanup) {
+    try {
+      pageCleanup();
+    } finally {
+      pageCleanup = null;
+    }
+  }
+}
+
 async function renderView(options = {}) {
+  teardownPage();
+  window.clearTimeout(liveRefreshTimer);
   const info = currentRoute();
   const host = document.getElementById("route-view");
   if (!host) return;
@@ -167,12 +229,21 @@ async function renderView(options = {}) {
   }
 
   const token = ++renderToken;
+  host.setAttribute("aria-busy", "true");
+  if (isApiMode()) {
+    host.innerHTML = stateBlock("loading", {
+      title: "正在加载控制面投影",
+      note: "等待只读快照；不推断成功、进度或最终判定。"
+    });
+    applyLanguage(host);
+  }
   const result = await loadRouteView(info.route.id, info.params);
   if (token !== renderToken) return;
 
   let state;
   if (result.mode === "api" && result.error) {
     host.innerHTML = apiErrorPanel(info, result);
+    host.setAttribute("aria-busy", "false");
     applyLanguage(host);
     updateNav(info.route.area);
     document.title = `${info.route.id} · API error · NoahsArk Console`;
@@ -190,16 +261,102 @@ async function renderView(options = {}) {
     ? adaptRouteView(info.route, info.params, result.payload, view())
     : view();
 
+  if (info.route.id === "TK-02") {
+    const taskId = info.params.taskId || null;
+    if (result.mode === "api") {
+      const supervisor = taskId
+        ? await loadTaskSupervisor(taskId)
+        : { status: "missing", task_id: null };
+      if (token !== renderToken) return;
+      let session = null;
+      if (supervisor.status === "ready") {
+        session = await loadTaskSessionMessages(taskId);
+        if (token !== renderToken) return;
+      }
+      state = { ...state, supervisor, session };
+    } else {
+      state = { ...state, supervisor: demoSupervisor(), session: demoSessionMessages() };
+    }
+
+    // Campaigns for this task only. Prefer the canonical UUID projected by the
+    // detail payload: the route may carry the display id (tsk-…), but the
+    // control-plane link is the UUID. The exact task_id check happens in the
+    // data source, so legacy unassociated rows never appear on a task page.
+    const canonicalTaskId = (state.world && state.world.task && state.world.task.id) || taskId;
+    if (canonicalTaskId) {
+      const campaignResult = await loadTestCampaigns({ taskId: canonicalTaskId });
+      if (token !== renderToken) return;
+      state = {
+        ...state,
+        taskNode: taskNodeFromResult(result),
+        taskCampaigns: campaignResult.ok ? campaignResult.campaigns || [] : [],
+        taskCampaignEndpoint: campaignResult.endpoint || null,
+        taskCampaignError: campaignResult.ok
+          ? null
+          : {
+              ...(campaignResult.error || {}),
+              status: campaignResult.status,
+              endpoint: campaignResult.endpoint
+            }
+      };
+    }
+  }
+
+  // Test campaigns belong to the Tasks area. The dedicated tab
+  // (?panel=campaigns) reads the all/unassociated projection; the main Tasks
+  // list renders Tasks only and never mixes campaigns into the task count.
+  if (info.route.id === "TK-01" && info.params.panel === "campaigns") {
+    const campaignResult = info.params.campaignId
+      ? await loadTestCampaign(info.params.campaignId)
+      : await loadTestCampaigns();
+    if (token !== renderToken) return;
+    if (campaignResult.ok) {
+      state = {
+        ...state,
+        campaigns: campaignResult.campaigns || (campaignResult.campaign ? [campaignResult.campaign] : []),
+        campaign: campaignResult.campaign || null,
+        campaignError: null
+      };
+    } else {
+      state = {
+        ...state,
+        campaigns: [],
+        campaign: null,
+        campaignError: {
+          ...(campaignResult.error || {}),
+          status: campaignResult.status,
+          endpoint: campaignResult.endpoint
+        }
+      };
+    }
+  }
+
+  host.setAttribute("aria-busy", "false");
   host.innerHTML = page.render({ route: info.route, params: info.params, view: state });
   applyLanguage(host);
   updateNav(info.route.area);
   document.title = `${info.route.id} · ${info.route.title} · NoahsArk Console`;
+  if (typeof page.hydrate === "function") {
+    pageCleanup = page.hydrate({
+      route: info.route,
+      params: info.params,
+      view: state,
+      mode: result.mode,
+      host,
+      refresh: () => renderView({ focus: false })
+    }) || null;
+  }
   if (options.focus) {
     const main = document.getElementById("main-content");
     if (main) {
       main.scrollTop = 0;
       main.focus({ preventScroll: true });
     }
+  }
+  if (result.mode === "api" && isLiveRoute(info.route.id)) {
+    liveRefreshTimer = window.setTimeout(() => {
+      if (currentRoute().route?.id === info.route.id && isApiMode()) renderView({ focus: false });
+    }, LIVE_REFRESH_MS);
   }
 }
 
@@ -239,6 +396,160 @@ function closeOverlay(id) {
     lastTrigger.focus();
     lastTrigger = null;
   }
+}
+
+function submitErrorMarkup(error, fallbackStatus) {
+  const status = error.status ?? fallbackStatus ?? 0;
+  const details = error.details && Array.isArray(error.details.fields)
+    ? `<p class="caption mono">fields: ${esc(error.details.fields.join(", "))}</p>`
+    : "";
+  return `
+    <div class="form-error">
+      <p class="form-error-title">创建任务失败</p>
+      <p class="caption">
+        <span class="mono">HTTP ${esc(String(status))}</span>
+        <span aria-hidden="true"> · </span>
+        <span class="mono">${esc(error.code || "ERROR")}</span>
+      </p>
+      <p class="form-error-message">${esc(error.message || "控制面请求未成功。")}</p>
+      ${details}
+      ${error.correlation_id ? `<p class="caption mono">correlation_id: ${esc(error.correlation_id)}</p>` : ""}
+    </div>
+  `;
+}
+
+async function submitNewTask(form) {
+  if (form.dataset.submitting === "true") return;
+  if (form.dataset.apiMode === "false") {
+    showFeedback(getLang() === "en" ? "Fixture demo mode does not submit real tasks; add ?api=1." : "fixture 演示模式不会提交真实任务；请添加 ?api=1。");
+    return;
+  }
+  const button = form.querySelector('button[type="submit"]');
+  const feedback = document.getElementById("new-task-feedback");
+  const values = new FormData(form);
+
+  form.dataset.submitting = "true";
+  form.setAttribute("aria-busy", "true");
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  }
+  if (feedback) {
+    feedback.hidden = true;
+    feedback.innerHTML = "";
+  }
+
+  const result = await createTask({
+    title: values.get("title") || "",
+    objective: values.get("objective") || "",
+    entry_mode: values.get("entry_mode") || "form",
+    lead_agent_id: values.get("lead_agent_id") || "",
+    prompt: values.get("prompt") || ""
+  });
+
+  form.dataset.submitting = "false";
+  form.setAttribute("aria-busy", "false");
+  if (button) {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+
+  if (!result.ok) {
+    // Keep the entered values (no re-render) and re-enable submit.
+    if (feedback) {
+      feedback.innerHTML = submitErrorMarkup(result.error || {}, result.status);
+      feedback.hidden = false;
+      feedback.setAttribute("tabindex", "-1");
+      feedback.focus({ preventScroll: true });
+    }
+    showFeedback(getLang() === "en" ? "Task creation failed; inputs were kept." : "创建任务失败；输入已保留，可修正后重试。");
+    return;
+  }
+
+  const task = result.task;
+  const dialog = form.closest("dialog");
+  if (dialog && typeof dialog.close === "function" && dialog.open) dialog.close();
+  showFeedback(getLang() === "en"
+    ? `Task ${task.display_id || task.task_id} created; opening its conversation.`
+    : `任务 ${task.display_id || task.task_id} 已创建；正在打开任务会话。`);
+  navigate(`/console/tasks/${encodeURIComponent(task.task_id)}/overview`);
+}
+
+// Layer 1 of the Tasks page: one description field creates a conversation task.
+async function submitQuickTask(form) {
+  if (form.dataset.submitting === "true") return;
+  const feedback = document.getElementById("task-create-feedback");
+  const button = form.querySelector('button[type="submit"]');
+  const textarea = form.querySelector('textarea[name="description"]');
+  const dialog = form.closest("dialog");
+  const description = textarea ? textarea.value.trim() : "";
+
+  if (form.dataset.apiMode === "false") {
+    if (feedback) {
+      feedback.innerHTML = `<div class="form-error"><p class="form-error-title">FIXTURE 演示模式</p><p class="form-error-message">fixture 模式不会创建真实任务；请切换到 API 数据源。</p></div>`;
+      feedback.hidden = false;
+    }
+    showFeedback(getLang() === "en" ? "Fixture demo mode does not create real tasks; switch to the API data source." : "fixture 演示模式不会创建真实任务；请切换 API 数据源。");
+    return;
+  }
+  if (!description) {
+    if (feedback) {
+      feedback.innerHTML = `<div class="form-error"><p class="form-error-title">任务描述不能为空</p><p class="form-error-message">请输入任务描述后再开始任务。</p></div>`;
+      feedback.hidden = false;
+      feedback.setAttribute("tabindex", "-1");
+      feedback.focus({ preventScroll: true });
+    }
+    return;
+  }
+
+  form.dataset.submitting = "true";
+  form.setAttribute("aria-busy", "true");
+  if (button) {
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+  }
+  if (feedback) {
+    feedback.hidden = true;
+    feedback.innerHTML = "";
+  }
+
+  const selected = (type) => Array.from(
+    dialog ? dialog.querySelectorAll(`input[data-task-resource="${type}"]:checked`) : []
+  ).map((input) => input.value);
+
+  const result = await createTask({
+    title: titleFromDescription(description),
+    objective: description,
+    prompt: description,
+    entry_mode: "conversation",
+    node_ids: selected("node"),
+    device_ids: selected("device")
+  });
+
+  form.dataset.submitting = "false";
+  form.setAttribute("aria-busy", "false");
+  if (button) {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+  }
+
+  if (!result.ok) {
+    if (feedback) {
+      feedback.innerHTML = submitErrorMarkup(result.error || {}, result.status);
+      feedback.hidden = false;
+      feedback.setAttribute("tabindex", "-1");
+      feedback.focus({ preventScroll: true });
+    }
+    showFeedback(getLang() === "en" ? "Task creation failed; your description was kept." : "创建任务失败；任务描述已保留，可修正后重试。");
+    return;
+  }
+
+  const task = result.task;
+  if (dialog && typeof dialog.close === "function" && dialog.open) dialog.close();
+  showFeedback(getLang() === "en"
+    ? `Task ${task.display_id || task.task_id} created; opening its conversation.`
+    : `任务 ${task.display_id || task.task_id} 已创建；正在打开任务会话。`);
+  navigate(`/console/tasks/${encodeURIComponent(task.task_id)}/overview`);
 }
 
 function openConfirm(trigger) {
@@ -282,6 +593,16 @@ function wireEvents() {
     if (action === "retry-api") {
       renderView({ focus: false });
       showFeedback(getLang() === "en" ? "Retrying the control-plane request." : "正在重试控制面请求。");
+      return;
+    }
+    if (action === "refresh-campaigns") {
+      renderView({ focus: false });
+      showFeedback(getLang() === "en" ? "Refreshing test campaigns." : "正在刷新测试活动。");
+      return;
+    }
+    if (action === "refresh-tasks" || action === "retry-task" || action === "refresh-supervisor") {
+      renderView({ focus: false });
+      showFeedback(getLang() === "en" ? "Refreshing task data." : "正在刷新任务数据。");
       return;
     }
     if (action === "switch-fixture") {
@@ -333,6 +654,19 @@ function wireEvents() {
         input.focus();
       }
     }
+  });
+
+  document.addEventListener("submit", (event) => {
+    const quick = event.target.closest("#task-create-form");
+    if (quick) {
+      event.preventDefault();
+      void submitQuickTask(quick);
+      return;
+    }
+    const form = event.target.closest("#new-task-form");
+    if (!form) return;
+    event.preventDefault();
+    void submitNewTask(form);
   });
 
   document.addEventListener("change", (event) => {

@@ -202,7 +202,8 @@ export function stateBlock(kind, options = {}) {
   const body = kind === "loading"
     ? `<div style="width:min(360px,80%)"><div class="skeleton" style="width:92%"></div><div class="skeleton" style="width:74%"></div><div class="skeleton" style="width:58%"></div></div>`
     : "";
-  return `<div class="state-block">${icon(item.glyph, "state-icon")}<div class="state-title">${esc(title)}</div><div class="state-note">${esc(note)}</div>${body}</div>`;
+  const role = kind === "error" ? ' role="alert"' : kind === "loading" ? ' role="status" aria-live="polite"' : "";
+  return `<div class="state-block"${role}>${icon(item.glyph, "state-icon")}<div class="state-title">${esc(title)}</div><div class="state-note">${esc(note)}</div>${body}</div>`;
 }
 
 export function genericState(view, label = "投影") {
@@ -322,8 +323,8 @@ export function timeline(items) {
     </div>`).join("")}</div>`;
 }
 
-export function tabs(items) {
-  return `<nav class="tabs" aria-label="任务子视图">${items.map((item) => `
+export function tabs(items, label = "任务子视图") {
+  return `<nav class="tabs" aria-label="${esc(label)}">${items.map((item) => `
     <a class="tab" href="#${esc(item.path)}" ${item.current ? 'aria-current="page"' : ""}>${esc(item.label)}</a>`).join("")}</nav>`;
 }
 

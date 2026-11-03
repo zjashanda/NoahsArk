@@ -20,7 +20,7 @@ export function render({ view }) {
     eyebrow: `Mission Control · MC-01 · ${view.scenario.id}`,
     title: "平台健康与需要我处理",
     description: "只呈现异常、待决断、离线、对账中与隔离设备，不做全量监控墙。完整清单下钻到任务、运行与设备。",
-    actions: button("新建任务", { href: "/console/intake/new", kind: "primary", icon: "plus" }) +
+    actions: button("新建任务", { href: "/console/tasks", kind: "primary", icon: "plus" }) +
       button("查看运行", { href: "/console/runs", icon: "runs" })
   });
   const generic = genericState(view, "Mission Control");

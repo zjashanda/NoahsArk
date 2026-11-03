@@ -1,6 +1,7 @@
 import {
   badge,
   button,
+  esc,
   genericState,
   kv,
   pageHeader,
@@ -64,7 +65,79 @@ const SOURCES = [
   { id: "src-form-03", kind: "FORM", label: "任务申请表", digest: "sha256:71fe…0a44", collected_at: "2026-10-29 13:31 +08:00", status: "PARSED" }
 ];
 
+function fixtureSourcesBody(view) {
+  const disabledReason = view.flags.noPermission
+    ? "当前角色无 TASK_AUTHORIZED；仅可查看摘要。"
+    : "";
+  return `
+    <div class="grid-cards">
+      <div class="card"><div class="spread"><span class="card-title">会话</span>${badge("CONVERSATION", "plain")}</div><p class="card-note">从澄清对话抽取意图、范围与验收口径。</p></div>
+      <div class="card"><div class="spread"><span class="card-title">文件</span>${badge("FILE", "plain")}</div><p class="card-note">上传计划、规格或日志摘要；保留 digest，不展示原始绝对路径。</p></div>
+      <div class="card"><div class="spread"><span class="card-title">表单</span>${badge("FORM", "action")}</div><p class="card-note">当前入口：结构化字段最完整，作为主来源。</p></div>
+    </div>
+    <div class="form-grid" style="margin-top:16px">
+      <div class="field field-full"><label for="draft-title">任务标题</label><input class="input" id="draft-title" value="TCL001 低温启动回归"></div>
+      <div class="field"><label for="draft-device">目标设备</label><input class="input" id="draft-device" value="TCL 系列 · V038"></div>
+      <div class="field"><label for="draft-count">采样次数</label><input class="input" id="draft-count" value="40"></div>
+      <div class="field field-full"><label for="draft-note">补充说明</label><textarea class="textarea" id="draft-note">低温 0–5°C，稳态与突发两类噪声；验收口径待裁决。</textarea></div>
+    </div>
+    <p class="caption" style="margin-top:8px">表单字段为 prototype-fixture，不会提交到服务端。</p>
+    ${disabledReason ? `<p class="caption">${disabledReason}</p>` : ""}
+  `;
+}
+
+function apiCreateForm(view) {
+  const disabledReason = view.flags.noPermission
+    ? "当前角色无 CREATE_TASK；可切换到具备该能力的演示角色后重试。"
+    : "";
+  const disabled = disabledReason
+    ? ` disabled aria-disabled="true" title="${esc(disabledReason)}"`
+    : "";
+  return `
+    <form class="form-grid" id="new-task-form" data-api-mode="true" aria-describedby="new-task-form-note">
+      <div class="field field-full">
+        <label for="new-task-title">任务标题</label>
+        <input class="input" id="new-task-title" name="title" type="text" required maxlength="200" autocomplete="off" placeholder="例如：TCL001 低温启动回归">
+      </div>
+      <div class="field field-full">
+        <label for="new-task-objective">任务目标</label>
+        <textarea class="textarea" id="new-task-objective" name="objective" required maxlength="20000" placeholder="描述本次任务要验证的目标与验收口径。"></textarea>
+        <span class="hint">Supervisor 使用本字段作为执行指令。</span>
+      </div>
+      <div class="field">
+        <label for="new-task-entry-mode">入口模式</label>
+        <select class="select" id="new-task-entry-mode" name="entry_mode">
+          <option value="form" selected>表单 form</option>
+          <option value="conversation">会话 conversation</option>
+          <option value="file">文件 file</option>
+          <option value="spreadsheet">表格 spreadsheet</option>
+          <option value="template">模板 template</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="new-task-lead-agent">负责 Agent</label>
+        <input class="input" id="new-task-lead-agent" name="lead_agent_id" type="text" value="agt-planner" maxlength="120" autocomplete="off">
+        <span class="hint">Agent display_id，默认 agt-planner（规划 Agent）。</span>
+      </div>
+      <div class="field field-full">
+        <label for="new-task-prompt">Supervisor 提示词</label>
+        <textarea class="textarea" id="new-task-prompt" name="prompt" required maxlength="200000">Reply with the single word PONG and nothing else.</textarea>
+        <span class="hint">绑定只保留提示词 digest 与字节数；执行指令取“任务目标”字段。</span>
+      </div>
+      <div class="field-full">
+        <div class="row">
+          <button class="btn btn-primary" type="submit" data-label="创建任务"${disabled}>创建任务</button>
+          ${disabledReason ? `<span class="btn-reason">${esc(disabledReason)}</span>` : ""}
+        </div>
+        <p class="caption" id="new-task-form-note" style="margin-top:8px">提交使用当前演示角色请求头；创建需要 CREATE_TASK。失败时保留输入并显示服务端状态/代码/消息，成功后进入任务详情查看 Supervisor。</p>
+        <div class="form-feedback" id="new-task-feedback" role="alert" aria-live="assertive" hidden></div>
+      </div>
+    </form>
+  `;
+}
+
 function wizardBody(view) {
+  const apiMode = Boolean(view.meta && view.meta.server_authoritative);
   const disabledReason = view.flags.noPermission
     ? "当前角色无 TASK_AUTHORIZED；仅可查看摘要。"
     : "";
@@ -77,21 +150,10 @@ function wizardBody(view) {
     <div class="section">
       ${panel({
         title: "1 · 来源",
-        note: "三入口共用归一化管线；不展示代理内部推理或未脱敏原文",
-        body: `
-          <div class="grid-cards">
-            <div class="card"><div class="spread"><span class="card-title">会话</span>${badge("CONVERSATION", "plain")}</div><p class="card-note">从澄清对话抽取意图、范围与验收口径。</p></div>
-            <div class="card"><div class="spread"><span class="card-title">文件</span>${badge("FILE", "plain")}</div><p class="card-note">上传计划、规格或日志摘要；保留 digest，不展示原始绝对路径。</p></div>
-            <div class="card"><div class="spread"><span class="card-title">表单</span>${badge("FORM", "action")}</div><p class="card-note">当前入口：结构化字段最完整，作为主来源。</p></div>
-          </div>
-          <div class="form-grid" style="margin-top:16px">
-            <div class="field field-full"><label for="draft-title">任务标题</label><input class="input" id="draft-title" value="TCL001 低温启动回归"></div>
-            <div class="field"><label for="draft-device">目标设备</label><input class="input" id="draft-device" value="TCL 系列 · V038"></div>
-            <div class="field"><label for="draft-count">采样次数</label><input class="input" id="draft-count" value="40"></div>
-            <div class="field field-full"><label for="draft-note">补充说明</label><textarea class="textarea" id="draft-note">低温 0–5°C，稳态与突发两类噪声；验收口径待裁决。</textarea></div>
-          </div>
-          <p class="caption" style="margin-top:8px">表单字段为 prototype-fixture，不会提交到服务端。</p>
-        `
+        note: apiMode
+          ? "真实写入：POST /api/v1/tasks；成功后由控制面绑定 Supervisor 会话"
+          : "三入口共用归一化管线；不展示代理内部推理或未脱敏原文",
+        body: apiMode ? apiCreateForm(view) : fixtureSourcesBody(view)
       })}
     </div>
     <div class="section">
@@ -124,7 +186,7 @@ function wizardBody(view) {
     <div class="section">
       ${panel({
         title: "3 · 修订种子",
-        note: "生成后仍为 DRAFT；进入冻结需 G0/G1",
+        note: apiMode ? "本步骤仍为原型预览；真实任务提交后进入任务详情" : "生成后仍为 DRAFT；进入冻结需 G0/G1",
         body: `
           ${kv([
             ["建议 task_id", `<span class="mono">tsk-voice-002</span>`],
@@ -138,7 +200,7 @@ function wizardBody(view) {
             ${button("生成修订种子", { kind: "primary", icon: "plus", disabledReason })}
             ${button("提交审阅", { icon: "arrow", disabledReason })}
           </div>
-          <p class="caption" style="margin-top:8px">所有按钮均为 prototype mock；冲突未处理前不得生成可冻结修订。</p>
+          <p class="caption" style="margin-top:8px">${apiMode ? "真实创建入口为第 1 步；本步骤按钮仍为 prototype mock。" : "所有按钮均为 prototype mock；冲突未处理前不得生成可冻结修订。"}</p>
         `
       })}
     </div>
@@ -220,14 +282,18 @@ export function render({ route, params, view }) {
     return detailBody(view, draft);
   }
   if (route.id === "IN-02") {
+    const apiMode = Boolean(view.meta && view.meta.server_authoritative);
+    const description = apiMode
+      ? "创建真实任务：填写标题、目标与提示词，提交后由控制面绑定 Supervisor 并进入任务详情。"
+      : "三步向导把会话、文件与表单归一为可审阅草稿；任何冲突或缺口必须显式处理。";
     if (generic) {
-      return pageHeader({ eyebrow: `Intake · IN-02 · ${view.scenario.id}`, title: "新建任务", description: "三步向导：来源 → 澄清 → 修订种子" }) + generic;
+      return pageHeader({ eyebrow: `Intake · IN-02 · ${view.scenario.id}`, title: "新建任务", description }) + generic;
     }
     return `
       ${pageHeader({
         eyebrow: `Intake · IN-02 · ${view.scenario.id}`,
         title: "新建任务",
-        description: "三步向导把会话、文件与表单归一为可审阅草稿；任何冲突或缺口必须显式处理。",
+        description,
         actions: button("返回草稿列表", { href: "/console/intake", kind: "quiet", icon: "arrow" })
       })}
       ${stateBanners(view)}

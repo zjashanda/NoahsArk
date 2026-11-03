@@ -222,6 +222,30 @@ function mapGate(gate, baseGates) {
   };
 }
 
+function mapTaskRow(source) {
+  const row = source && typeof source === "object" ? source : {};
+  const card = row.task_card && typeof row.task_card === "object" ? row.task_card : {};
+  const resources = card.resources && typeof card.resources === "object" ? card.resources : {};
+  const progress = card.progress && typeof card.progress === "object"
+    ? card.progress
+    : row.progress && typeof row.progress === "object"
+      ? row.progress
+      : null;
+  return {
+    id: text(firstDefined(row.task_id, row.display_id), "—"),
+    display_id: text(firstDefined(row.display_id, row.task_id), "—"),
+    title: text(firstDefined(card.task_title, row.title), "未命名任务"),
+    status: text(firstDefined(card.status_display, card.stage, row.status), "UNKNOWN"),
+    stage: text(firstDefined(card.stage, row.latest_run_lifecycle, row.status), "UNKNOWN"),
+    node: text(
+      firstDefined(resources.node_display_id, resources.node_id, row.node_display_id, row.node_id),
+      ""
+    ),
+    progress,
+    updated_at: firstDefined(row.updated_at, row.created_at, null)
+  };
+}
+
 function mapTask(source, baseTask, baseRevisions) {
   const summary = source && source.task ? source.task : source;
   if (!summary) return baseTask;
@@ -229,10 +253,13 @@ function mapTask(source, baseTask, baseRevisions) {
   const baseRevision = (baseRevisions || []).find((item) => item.number === `R-${revisionNumber}`);
   return {
     ...baseTask,
-    id: text(firstDefined(summary.display_id, summary.task_id), baseTask.id),
+    id: text(firstDefined(summary.task_id, summary.display_id), baseTask.id),
     display_id: text(firstDefined(summary.display_id, summary.task_id), baseTask.display_id),
     title: text(firstDefined(summary.title, baseTask.title), baseTask.title),
     stage: text(firstDefined(summary.status, summary.latest_run_lifecycle, baseTask.stage), baseTask.stage),
+    lead_agent_id: firstDefined(summary.lead_agent_id, baseTask.lead_agent_id, null),
+    lead_agent_display_id: text(firstDefined(summary.lead_agent_display_id, baseTask.lead_agent_display_id), null),
+    lead_agent_name: text(firstDefined(summary.lead_agent_name, baseTask.lead_agent_name), null),
     current_revision_id: text(
       firstDefined(summary.current_revision_display_id, baseRevision && baseRevision.id, summary.current_revision_id, baseTask.current_revision_id),
       baseTask.current_revision_id
@@ -241,6 +268,7 @@ function mapTask(source, baseTask, baseRevisions) {
     change_kind: firstDefined(summary.change_kind, baseTask.change_kind),
     content_digest: firstDefined(summary.content_digest, summary.current_revision?.content_digest, baseTask.content_digest),
     frozen_scope: firstDefined(summary.frozen_scope, summary.current_revision?.frozen_scope, baseTask.frozen_scope),
+    created_at: text(firstDefined(summary.created_at, baseTask.created_at), baseTask.created_at),
     updated_at: text(firstDefined(summary.updated_at, baseTask.updated_at), baseTask.updated_at)
   };
 }
@@ -351,15 +379,32 @@ function mapAttempt(attempt, baseAttempts, runId) {
 function mapDevice(device, baseDevices) {
   const id = text(firstDefined(device.display_id, device.device_id));
   const base = byId(baseDevices, id) || {};
+  const node = device.node && typeof device.node === "object" ? device.node : null;
+  const identity = device.identity && typeof device.identity === "object" ? device.identity : null;
+  const identityLabel = identity
+    ? firstDefined(identity.model, identity.manufacturer, device.display_id)
+    : device.identity;
   return {
     ...base,
     id,
-    label: text(firstDefined(base.label, device.identity, device.display_id), id),
-    identity: text(firstDefined(device.identity, base.identity, device.display_id), id),
+    backend_id: text(firstDefined(device.device_id, base.backend_id, id)),
+    node_id: text(firstDefined(node && node.display_id, node && node.node_id, device.node_id, base.node_id), null),
+    label: text(firstDefined(base.label, identityLabel, device.display_id), id),
+    identity: text(firstDefined(identityLabel, base.identity, device.display_id), id),
+    // Raw identity dict for whole-object PATCHes (e.g. editing kind without
+    // dropping model/serial metadata); the display label above stays a string.
+    identity_data: identity ? { ...identity } : null,
+    kind: text(firstDefined(identity && identity.kind, base.kind), "—"),
     pool_state: text(firstDefined(device.pool_state, base.pool_state), "UNKNOWN"),
     health_state: text(firstDefined(device.health_state, base.health_state), "UNKNOWN"),
-    serial_masked: text(firstDefined(base.serial_masked, maskSerial(id)), "—"),
+    serial_masked: text(firstDefined(identity && identity.serial_number_masked, base.serial_masked, maskSerial(id)), "—"),
     firmware: text(firstDefined(device.firmware_version, device.firmware, base.firmware), "—"),
+    firmware_version: text(firstDefined(device.firmware_version, base.firmware_version), "—"),
+    capabilities: list(device.capabilities) || base.capabilities || [],
+    endpoints: list(device.endpoints) || base.endpoints || [],
+    last_seen_at: text(firstDefined(device.last_seen_at, base.last_seen_at), "—"),
+    config_digest: text(firstDefined(device.config_digest, base.config_digest), "—"),
+    adapter_version: text(firstDefined(device.adapter_version, base.adapter_version), "—"),
     current_lease_id: firstDefined(
       device.current_lease?.display_id,
       device.current_lease_id && base.current_lease_id,
@@ -377,14 +422,24 @@ function mapNode(node, baseNodes) {
   const id = text(firstDefined(node.display_id, node.node_id));
   const base = byId(baseNodes, id) || {};
   const spool = node.spool && typeof node.spool === "object" ? node.spool : {};
+  const session = node.interactive_session;
+  const interactive = session && typeof session === "object"
+    ? firstDefined(session.state, session.available === true ? "AVAILABLE" : undefined)
+    : session;
   return {
     ...base,
     id,
-    label: text(firstDefined(base.label, node.hostname, node.display_id), id),
+    backend_id: text(firstDefined(node.node_id, base.backend_id, id)),
+    label: text(firstDefined(node.hostname, node.display_id, node.node_id, base.label), id),
+    hostname: text(firstDefined(node.hostname, base.hostname), "—"),
+    status: text(firstDefined(node.status, base.status), "UNKNOWN"),
+    agent_version: text(firstDefined(node.agent_version, base.agent_version), "—"),
+    capabilities: list(node.capabilities) || base.capabilities || [],
+    endpoint_ids: list(node.endpoint_ids) || base.endpoint_ids || [],
     communication_state: text(firstDefined(node.communication_state, base.communication_state), "UNKNOWN"),
-    interactive_session: text(firstDefined(node.interactive_session, base.interactive_session), "UNKNOWN"),
+    interactive_session: text(firstDefined(interactive, base.interactive_session), "UNKNOWN"),
     spool_state: text(firstDefined(spool.state, node.spool_state, node.status, base.spool_state), "UNKNOWN"),
-    spool_pending: Number(firstDefined(spool.pending, node.spool_pending, base.spool_pending, 0)),
+    spool_pending: Number(firstDefined(spool.pending, spool.pending_messages, node.spool_pending, base.spool_pending, 0)),
     last_heartbeat_at: text(firstDefined(node.last_heartbeat_at, base.last_heartbeat_at), "—"),
     endpoints: list(node.capabilities) || node.endpoints || base.endpoints || []
   };
@@ -517,6 +572,24 @@ function mapVerdict(verdict) {
   };
 }
 
+function mapLiveEvent(event) {
+  const source = event && typeof event === "object" ? event : {};
+  const rawState = String(firstDefined(source.state, source.status, source.level, "current")).toLowerCase();
+  const state = ["done", "blocked", "current"].includes(rawState)
+    ? rawState
+    : rawState.includes("fail") || rawState.includes("block") || rawState.includes("error")
+      ? "blocked"
+      : rawState.includes("complete") || rawState.includes("pass") || rawState.includes("received")
+        ? "done"
+        : "current";
+  return {
+    title: text(firstDefined(source.title, source.type, source.event_type, source.kind), "节点/控制面事件"),
+    time: text(firstDefined(source.occurred_at, source.created_at, source.timestamp), "—"),
+    body: text(firstDefined(source.summary, source.message, source.detail), "只读事件事实；不推断最终判定。"),
+    state
+  };
+}
+
 function replaceArray(baseItems, mapped, idKey = "id") {
   if (!mapped || !mapped.length) return baseItems || [];
   const copy = (baseItems || []).slice();
@@ -557,6 +630,7 @@ function applyCollections(routeId, data, world, baseEvidence) {
     }
     case "TK-01": {
       if (runItems && runItems[0]) next.task = mapTask(runItems[0], world.task, world.revisions);
+      if (runItems) next.taskRows = runItems.map(mapTaskRow);
       break;
     }
     case "TK-02":
@@ -632,6 +706,22 @@ function applyCollections(routeId, data, world, baseEvidence) {
     }
     case "DV-01": {
       if (runItems) next.devices = runItems.map((device) => mapDevice(device, world.devices));
+      // GET /devices embeds each device's node; promote those nodes so the node
+      // management page reflects the live projection instead of fixture nodes.
+      const embeddedNodes = (runItems || [])
+        .map((device) => device && typeof device === "object" ? device.node : null)
+        .filter((node) => node && typeof node === "object");
+      if (embeddedNodes.length) {
+        const seen = new Set();
+        const mapped = [];
+        for (const node of embeddedNodes) {
+          const item = mapNode(node, world.nodes);
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
+          mapped.push(item);
+        }
+        next.nodes = mapped;
+      }
       if (list(data.nodes)) next.nodes = data.nodes.map((node) => mapNode(node, world.nodes));
       break;
     }
@@ -816,6 +906,11 @@ export function adaptRouteView(route, params, payload, base) {
   const world = applyCollections(route.id, data, base.world, base.evidence);
   const counts = normalizeCounts(data, evidence === base.evidence ? null : evidence, base);
   const flags = deriveFlags(base.flags, axes, link, progress, data);
+  const liveEvents = list(data.events)
+    ? data.events.map(mapLiveEvent)
+    : list(data.timeline)
+      ? data.timeline.map(mapLiveEvent)
+      : base.liveEvents || [];
 
   return {
     ...base,
@@ -832,6 +927,7 @@ export function adaptRouteView(route, params, payload, base) {
     gates,
     evidence,
     counts,
+    liveEvents,
     world
   };
 }

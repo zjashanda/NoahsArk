@@ -23,7 +23,7 @@ python3 -m http.server 8100 --bind 0.0.0.0 -d design/ui-app
 
 ## 数据源
 
-默认是本地 fixture（`server_authoritative=false`）。控制面只读 API 需要显式开启：
+默认是本地 fixture（`server_authoritative=false`）。控制面 API 需要显式开启：
 
 - `?api=1` 开启 API，`?api=0` 强制 fixture；
 - 侧栏 / 抽屉 / More 面板中的“数据源”选择器会写入 `localStorage.naa-api`；
@@ -33,7 +33,7 @@ python3 -m http.server 8100 --bind 0.0.0.0 -d design/ui-app
 
 ## 范围
 
-- 12 个区域、39 条规范路由，任务详情 8 个子视图。
+- 12 个区域、39 条规范路由；Tasks 主页面是任务会话列表 + 新建任务弹窗，任务详情即对话并带可折叠 Inspector，8 个只读子视图仍作为投影入口。
 - 四条关键旅程：Intake→审批→门禁、Task→Run→Attempt、离线 STOP-first 对账、证据→Linux 判定→报告。
 - 五轴独立显示；只有 `COMPLETED / VALID / PASS / COMPLETE / PASS` 显示正式 PASS。
 - `expected / received / verified` 三列分离；通信、占用、执行许可、执行状态、新鲜度分离。
@@ -75,8 +75,8 @@ checks/   contract-check.mjs, smoke-check.mjs
 
 ## 边界
 
-- fixture 模式不连接后端、不写数据库、不发起远程请求、不加载外部字体或 CDN；`?api=1` 只读调用控制面 `/api/v1`。
-- 仍不写数据库、不发写请求；所有写按钮均为标注的 mock 交互。
+- fixture 模式不连接后端、不写数据库、不发起远程请求、不加载外部字体或 CDN；`?api=1` 调用控制面 `/api/v1`。
+- API 模式的“新建任务”弹窗会真实调用 `POST /api/v1/tasks`（校验、`Idempotency-Key`、失败可见且不回退 fixture）；成功后进入任务会话详情。任务列表与详情支持经确认的 `DELETE /api/v1/tasks/{task_id}`（`TASK_ACTIVE`/404 显式处理）。其余写按钮仍为标注的 mock 交互。
 - RT/AG 的写入能力仍待 Q-09 裁决，界面只读并显示禁用原因。
 - 本目录不得替代 `design/ui-demos/` 的三方向对比演示。
 

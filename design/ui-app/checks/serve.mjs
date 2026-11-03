@@ -1,12 +1,13 @@
 // Static file server for the candidate UI with a same-origin /api/v1 proxy.
 //
 // Usage: node checks/serve.mjs [port]
-// The browser always talks to http://127.0.0.1:<port>/api/v1 so CORS never
-// forces the UI to know the control-plane origin.  Override the upstream with
+// The browser talks to the same-origin /api/v1 proxy so CORS never forces the
+// UI to know the control-plane origin. Override the upstream with
 // NAA_API_UPSTREAM (default http://127.0.0.1:8000).
 
 import { createServer } from "node:http";
 import { createReadStream, existsSync, statSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,7 +25,11 @@ const MIME = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".woff2": "font/woff2",
-  ".ico": "image/x-icon"
+  ".ico": "image/x-icon",
+  // Install artefacts served to the one-click add-node commands.
+  ".sh": "text/x-shellscript; charset=utf-8",
+  ".ps1": "text/plain; charset=utf-8",
+  ".tgz": "application/gzip"
 };
 
 function sendJson(response, status, body) {
@@ -44,7 +49,7 @@ async function proxy(request, response, url) {
   const headers = { ...request.headers, host: new URL(upstream).host };
   delete headers.connection;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  const timer = setTimeout(() => controller.abort(), 180000);
   try {
     const upstreamResponse = await fetch(`${upstream}${url.pathname}${url.search}`, {
       method: request.method,
@@ -99,13 +104,56 @@ function serveStatic(request, response, url) {
   createReadStream(file).pipe(response);
 }
 
+async function serveInstaller(request, response, url) {
+  const name = url.pathname === "/install/node.sh" ? "node.sh" : "node.ps1";
+  let source;
+  try {
+    source = await readFile(join(root, "install", name), "utf8");
+  } catch {
+    response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    response.end("installer not found\n");
+    return;
+  }
+  const origin = `http://${request.headers.host || `127.0.0.1:${port}`}`;
+  let token = "";
+  try {
+    const tokenResponse = await fetch(`${upstream}/api/v1/nodes/enrollment-token`, {
+      headers: {
+        "X-NoahsArk-Role": "ADMIN",
+        "X-NoahsArk-Actor": "admin-01"
+      }
+    });
+    const payload = await tokenResponse.json();
+    token = payload && payload.data ? payload.data.token || "" : "";
+  } catch {
+    token = "";
+  }
+  if (!token) {
+    response.writeHead(503, { "content-type": "text/plain; charset=utf-8" });
+    response.end("node enrollment token is unavailable\n");
+    return;
+  }
+  const rendered = source
+    .split("__CONTROL_PLANE__").join(origin)
+    .split("__ENROLLMENT_TOKEN__").join(token);
+  response.writeHead(200, {
+    "content-type": "text/plain; charset=utf-8",
+    "cache-control": "no-store"
+  });
+  response.end(rendered);
+}
+
 createServer((request, response) => {
   const url = new URL(request.url || "/", `http://127.0.0.1:${port}`);
-  if (url.pathname.startsWith("/api/v1/")) {
+  if (url.pathname === "/install/node.sh" || url.pathname === "/install/node.ps1") {
+    void serveInstaller(request, response, url);
+    return;
+  }
+  if (url.pathname.startsWith("/api/v1/") || url.pathname.startsWith("/node/v1/")) {
     void proxy(request, response, url);
     return;
   }
   serveStatic(request, response, url);
-}).listen(port, "127.0.0.1", () => {
-  console.log(`candidate UI on http://127.0.0.1:${port}/ (proxy /api/v1 -> ${upstream})`);
+}).listen(port, "0.0.0.0", () => {
+  console.log(`candidate UI on http://0.0.0.0:${port}/ (proxy /api/v1 -> ${upstream})`);
 });

@@ -2,18 +2,18 @@
 // Machine-readable source: design/ui-app/routes.json
 
 export const AREAS = {
-  MC: { label: "Mission Control", icon: "mission", group: "primary" },
-  IN: { label: "Intake", icon: "intake", group: "primary" },
-  TK: { label: "Tasks", icon: "tasks", group: "primary" },
-  RN: { label: "Runs & Attempts", icon: "runs", group: "primary" },
-  EV: { label: "Evidence & Verdict", icon: "evidence", group: "primary" },
-  DV: { label: "Devices & Nodes", icon: "devices", group: "primary" },
-  RP: { label: "Reports", icon: "reports", group: "primary" },
-  KN: { label: "Knowledge", icon: "knowledge", group: "primary" },
-  RT: { label: "Runtime & Toolchain", icon: "runtime", group: "operations" },
-  AG: { label: "Agents & Reviews", icon: "agents", group: "operations" },
-  AU: { label: "Audit & Recovery", icon: "audit", group: "operations" },
-  ST: { label: "Settings & Access", icon: "settings", group: "operations" }
+  MC: { label: "Mission Control", navLabel: "任务总览", icon: "mission", group: "primary" },
+  IN: { label: "Intake", navLabel: "任务受理", icon: "intake", group: "primary" },
+  TK: { label: "Tasks", navLabel: "任务", icon: "tasks", group: "primary" },
+  RN: { label: "Runs & Attempts", navLabel: "运行", icon: "runs", group: "primary" },
+  EV: { label: "Evidence & Verdict", navLabel: "证据与判定", icon: "evidence", group: "primary" },
+  DV: { label: "Devices & Nodes", navLabel: "节点管理", icon: "devices", group: "primary" },
+  RP: { label: "Reports", navLabel: "报告", icon: "reports", group: "primary" },
+  KN: { label: "Knowledge", navLabel: "知识库", icon: "knowledge", group: "primary" },
+  RT: { label: "Runtime & Toolchain", navLabel: "运行时", icon: "runtime", group: "operations" },
+  AG: { label: "Agents & Reviews", navLabel: "代理与评审", icon: "agents", group: "operations" },
+  AU: { label: "Audit & Recovery", navLabel: "审计与恢复", icon: "audit", group: "operations" },
+  ST: { label: "Settings & Access", navLabel: "设置与访问", icon: "settings", group: "operations" }
 };
 
 export const ROUTES = [
@@ -22,7 +22,7 @@ export const ROUTES = [
   { id: "IN-02", path: "/console/intake/new", title: "New intake", area: "IN", family: "intake" },
   { id: "IN-03", path: "/console/intake/:draftId", title: "Draft review", area: "IN", family: "intake" },
   { id: "TK-01", path: "/console/tasks", title: "Tasks", area: "TK", family: "tasks" },
-  { id: "TK-02", path: "/console/tasks/:taskId/overview", title: "Task overview", area: "TK", family: "tasks" },
+  { id: "TK-02", path: "/console/tasks/:taskId/overview", title: "Task conversation", area: "TK", family: "tasks" },
   { id: "TK-03", path: "/console/tasks/:taskId/revisions", title: "Revisions & approval", area: "TK", family: "tasks" },
   { id: "TK-04", path: "/console/tasks/:taskId/plan", title: "Plan & cases", area: "TK", family: "tasks" },
   { id: "TK-05", path: "/console/tasks/:taskId/runs", title: "Task runs", area: "TK", family: "tasks" },
@@ -61,9 +61,14 @@ export const ROUTES = [
 export const PRIMARY_AREAS = ["MC", "IN", "TK", "RN", "EV", "DV", "RP", "KN"];
 export const OPERATIONS_AREAS = ["RT", "AG", "AU", "ST"];
 
+// The platform workspace exposes exactly four areas. Other registered areas
+// (Mission Control, Intake, Runs, Evidence, Operations...) remain reachable by
+// route but are intentionally absent from the workspace navigation.
+export const WORKSPACE_NAV_AREAS = ["TK", "DV", "RP", "KN"];
+
 export function areaEntryPath(area) {
   const route = ROUTES.find((item) => item.area === area);
-  return route ? route.path : "/console";
+  return route ? route.path : "/console/tasks";
 }
 
 export function routeById(id) {
