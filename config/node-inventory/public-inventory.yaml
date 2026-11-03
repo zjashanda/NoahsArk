@@ -1,0 +1,8 @@
+schema_version: 1
+inventory_id: noahsark-nodes-public
+updated_at: "2026-10-30T00:00:00Z"
+updated_by: unassigned
+# Non-sensitive metadata only. Connection details live in the SOPS-encrypted
+# private inventory. No node has been imported or verified yet, so this list
+# is intentionally empty: an empty list is honest, a fabricated node is not.
+nodes: []

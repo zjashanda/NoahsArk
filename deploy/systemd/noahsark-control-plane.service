@@ -1,0 +1,64 @@
+[Unit]
+Description=NoahsArk Control Plane API (V0.0.1 single host)
+Documentation=file:/opt/noahsark/app/deploy/README.md
+After=network-online.target
+Wants=network-online.target
+
+# PostgreSQL is expected on loopback. It is deliberately not a hard
+# dependency: when DATABASE_URL is absent or the database is down,
+# /healthz stays up and /readyz returns 503 (degraded), which is what
+# scripts/healthcheck.sh reports.
+[Service]
+Type=simple
+User=noahsark
+Group=noahsark
+WorkingDirectory=/opt/noahsark/app/apps/control_plane
+EnvironmentFile=/etc/noahsark/control-plane.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/noahsark/app/.venv/bin/uvicorn noahsark.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1 --no-server-header --no-access-log
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+
+# Runtime state: evidence blobs, any local spool and logs live below the
+# StateDirectory/LogsDirectory managed by systemd.
+StateDirectory=noahsark
+StateDirectoryMode=0700
+LogsDirectory=noahsark
+LogsDirectoryMode=0700
+UMask=0077
+LimitNOFILE=65536
+
+# Hardening. Review before production: the API is only reachable on
+# loopback, so IPAddressAllow=localhost is intentional. A remote database
+# requires widening this rule and documenting the exception.
+NoNewPrivileges=true
+# Drop every Linux capability; the API needs none.
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressAllow=localhost
+IPAddressDeny=any
+
+[Install]
+WantedBy=multi-user.target

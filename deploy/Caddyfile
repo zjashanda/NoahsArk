@@ -1,0 +1,82 @@
+# NoahsArk V0.0.1 single-host reverse proxy.
+#
+# Topology (owner decision G-DEPLOY, 2026-10-29):
+#   browser -> Caddy :443 -> UI 127.0.0.1:8100
+#                          \-> API 127.0.0.1:8000 for /api/*
+#
+# This file is a template. Replace `console.example.internal` and the TLS
+# account/e-mail placeholder with values confirmed by the operator. The
+# repository must never contain a real internal hostname, public IP, token,
+# certificate or private key.
+#
+# Validation status: STATIC REVIEW ONLY. Caddy is not installed on the
+# development host, so this file has not been parsed by `caddy validate`.
+
+{
+	admin 127.0.0.1:2019
+
+	# `tls internal` below signs the certificate with Caddy's local CA, which
+	# is appropriate for an internal-only hostname. If the deployment obtains
+	# a publicly trusted certificate instead, delete `tls internal` and set a
+	# real ACME account e-mail through NAA_TLS_EMAIL.
+	email {$NAA_TLS_EMAIL:ops@example.internal}
+
+	# Keep Caddy's own log bounded; access logging is configured per site.
+	log default {
+		output file /var/log/caddy/noahsark-caddy.log {
+			roll_size 20MiB
+			roll_keep 10
+		}
+		format json
+	}
+}
+
+console.example.internal {
+	encode zstd gzip
+
+	# Internal CA for `*.example.internal`. Replace with public ACME only when
+	# the real hostname and DNS challenge/HTTP challenge path are confirmed.
+	tls internal
+
+	# Do not leak implementation details; HSTS is safe because Caddy
+	# redirects all plain HTTP to HTTPS automatically.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		X-Permitted-Cross-Domain-Policies "none"
+		-Server
+	}
+
+	# API traffic only. Health endpoints stay on the loopback API listener and
+	# are probed by scripts/healthcheck.sh; they are not published here.
+	@api path /api/*
+	handle @api {
+		reverse_proxy 127.0.0.1:8000 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	# Candidate UI static server (design/ui-app/checks/serve.mjs) listens on
+	# 8100 and proxies /api/v1 itself. Caddy sends API paths to the control
+	# plane directly, so the UI never needs to know the API origin.
+	handle {
+		reverse_proxy 127.0.0.1:8100 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	log {
+		output file /var/log/caddy/noahsark-access.log {
+			roll_size 50MiB
+			roll_keep 14
+		}
+		format json
+	}
+}

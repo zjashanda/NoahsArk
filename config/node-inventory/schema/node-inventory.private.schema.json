@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noahsark.local/schema/node-inventory.private.schema.json",
+  "title": "NoahsArk private node inventory (SOPS-encrypted, references only)",
+  "description": "Decrypted shape of nodes.enc.yaml. Only non-public connection metadata and indirect credential references live here. Actual secret values (passwords, private keys, tokens) must never appear in this file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "inventory_id", "updated_at", "updated_by", "nodes"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "inventory_id": {"type": "string", "const": "noahsark-nodes-private"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "updated_by": {"type": "string", "minLength": 1, "maxLength": 64},
+    "nodes": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/node"}
+    }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "ssh_alias",
+        "port",
+        "host_ref",
+        "user_ref",
+        "credential_ref",
+        "agent_url"
+      ],
+      "properties": {
+        "node_id": {"$ref": "#/$defs/node_id"},
+        "ssh_alias": {"$ref": "#/$defs/ssh_alias"},
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+        "host_ref": {"$ref": "#/$defs/ref"},
+        "user_ref": {"$ref": "#/$defs/ref"},
+        "credential_ref": {
+          "type": "string",
+          "pattern": "^(ssh-agent:[A-Za-z0-9._-]{1,64}|keyfile:/[^\\s]+|vault:[A-Za-z0-9._/-]{1,128})$"
+        },
+        "agent_url": {"type": ["string", "null"], "format": "uri"}
+      }
+    },
+    "node_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,31}$"
+    },
+    "ssh_alias": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "ref": {
+      "type": "string",
+      "pattern": "^(env:[A-Z][A-Z0-9_]{0,63}|file:/[^\\s]{1,200}|literal:[A-Za-z0-9._-]{1,128})$"
+    }
+  }
+}

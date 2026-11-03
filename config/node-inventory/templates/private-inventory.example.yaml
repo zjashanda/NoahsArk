@@ -1,0 +1,26 @@
+# TEMPLATE ONLY for the SOPS-encrypted private inventory.
+# Copy outside the repo, fill in references (never values), then run:
+#   scripts/node-inventory/import-inventory.sh \
+#     --source <sanitized-public.yaml> \
+#     --private-source <private-refs.yaml>
+#
+# Allowed values are INDIRECT references only:
+#   host_ref:       env:ARK_NODE_WIN009_HOST | file:/abs/path | literal:<host>
+#   user_ref:       env:ARK_NODE_WIN009_USER | file:/abs/path | literal:<user>
+#   credential_ref: ssh-agent:win009-ed25519 | keyfile:/abs/path | vault:agent/win009
+#
+# Forbidden anywhere in this file: password, passphrase, token, private key
+# material, complete SSH command lines. The importer validates and refuses.
+schema_version: 1
+inventory_id: noahsark-nodes-private
+# The importer overwrites updated_at; the placeholder only satisfies the schema.
+updated_at: "2000-01-01T00:00:00Z"
+updated_by: operator-id
+nodes:
+  - node_id: win009
+    ssh_alias: win009
+    port: 22
+    host_ref: env:ARK_NODE_WIN009_HOST
+    user_ref: env:ARK_NODE_WIN009_USER
+    credential_ref: ssh-agent:win009-ed25519
+    agent_url: null

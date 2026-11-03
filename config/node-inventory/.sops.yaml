@@ -1,0 +1,15 @@
+# SOPS creation rules for the NoahsArk node inventory.
+#
+# Only age PUBLIC keys belong in this file. Never put an age identity
+# (AGE-SECRET-KEY-...) or any SSH private key here.
+#
+# Operator step (one time, local machine):
+#   scripts/node-inventory/init-local-store.sh --generate-key
+#   # then replace the placeholder below with the printed age public key
+#
+# Validation is fail-closed: while the placeholder is present, any sops
+# encrypt/decrypt call against nodes.enc.yaml must fail instead of writing
+# a file encrypted to nobody.
+creation_rules:
+  - path_regex: (^|/)config/node-inventory/nodes\.enc\.yaml$
+    age: age1REPLACE_WITH_OPERATOR_PUBLIC_KEY

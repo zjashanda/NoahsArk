@@ -1,0 +1,58 @@
+[Unit]
+Description=NoahsArk Linux development node agent (placeholder, disabled by default)
+Documentation=file:/opt/noahsark/app/deploy/README.md
+# V0.0.1 deliberately does NOT run a node agent on the control-plane host.
+# The real Windows Node Agent belongs to P5-W5/G-NODE and is not frozen.
+# This unit only makes the deployment surface explicit and is never enabled
+# by the install steps. It runs the development simulator, which performs no
+# device action and produces no acceptance evidence.
+ConditionPathExists=/opt/noahsark/app/apps/node_agent/.venv/bin/python
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=noahsark-node
+Group=noahsark-node
+WorkingDirectory=/opt/noahsark/app/apps/node_agent
+# Optional operator-provided file; never commit it.
+EnvironmentFile=-/etc/noahsark/node-agent.env
+Environment=NOAHSARK_CONTROL_PLANE_URL=http://127.0.0.1:8000
+Environment=NOAHSARK_SPOOL_PATH=/var/lib/noahsark-node/spool.sqlite3
+Environment=NOAHSARK_ARTIFACT_CACHE_DIR=/var/lib/noahsark-node/artifacts
+ExecStart=/opt/noahsark/app/apps/node_agent/.venv/bin/python -m noahsark_node --interval 15
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+
+StateDirectory=noahsark-node
+StateDirectoryMode=0700
+LogsDirectory=noahsark-node
+LogsDirectoryMode=0700
+UMask=0077
+
+NoNewPrivileges=true
+# Drop every Linux capability; the simulator needs none. A real device
+# adapter that requires hardware access must document a narrow exception.
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,25 @@
+# TEMPLATE ONLY. Copy to a workspace outside the repo, edit, then run:
+#   scripts/node-inventory/import-inventory.sh --source <file>
+#
+# Sanitized public metadata is the ONLY thing allowed here. Do NOT add:
+#   host/IP, username, password, passphrase, private key, token, full SSH line.
+# Those belong in the protected private-refs template and are encrypted locally.
+schema_version: 1
+inventory_id: noahsark-nodes-public
+# The importer overwrites updated_at; the placeholder only satisfies the schema.
+updated_at: "2000-01-01T00:00:00Z"
+updated_by: operator-id
+nodes:
+  - node_id: win009
+    ssh_alias: win009
+    os: windows-11
+    agent_id: null
+    device_ids: []
+    capabilities: [serial, audio, dut-control, evidence-upload]
+    status: pending
+    last_seen_at: null
+    last_verified_at: null
+    last_verified_result: not_run
+    config_version: 0
+    owner: node-owner-id
+    risk: unknown
