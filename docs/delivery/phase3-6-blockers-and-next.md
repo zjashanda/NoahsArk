@@ -20,7 +20,12 @@
 
 ### B2：生产认证
 
-开发期已采用 `X-NoahsArk-Role`。生产前需要：
+本地账号层已完成（2026-10-30）：Argon2id `password_hash`、迁移
+`b2f1a4c7d902`、`NOAHSARK_BOOTSTRAP_*` 环境变量引导的 `bszheng`(ADMIN)
+与 `test001`(OBSERVER)、dev-login/session/logout 及审计，证据见
+`docs/delivery/evidence/b2-accounts-auth.md`。该层仅为开发用途，不替代生产认证。
+
+开发期已采用 `X-NoahsArk-Role`。生产前仍需要：
 
 - OIDC/企业身份提供商或本地账号方案
 - issuer、audience、JWKS/client 配置

@@ -100,3 +100,10 @@ P0-03 源级遗留冲突：已对齐评审架构、模块、方案 B 与优化�
 - 阶段状态不变：Phase 1 候选未冻结；Phase 2 草稿未冻结；Phase 3 评审稿；Phase 4 评审稿；Phase 5 仅为计划。
 - 待决事项：契约 v1.1 独立验证、工具链 ADR-001 至 ADR-010、真实认证、证据存储后端、部署拓扑、Node Agent 打包、P2-05 前端架构、样本/阈值任务级批准、RPO/RTO 演练。
 - 事实冲突待主控裁定：纵切批次 2 的“进行中”口径与 `backend-integration-progress.md` 的“DONE 37 passed”不一致；UI smoke 的 249/249 与本文档早期 248/248 记录不一致。
+
+## 2026-10-30 B2 本地账号与开发认证
+
+- 已完成 `apps/control_plane/` 内的本地账号层：`pwdlib[argon2]` Argon2id 摘要、`users.password_hash` 迁移 `b2f1a4c7d902`、环境变量/隐藏输入 bootstrap、`/api/v1/auth/dev-login` 与服务端会话、`AUTH_LOGIN`/`AUTH_LOGOUT` 审计。
+- 账号：`bszheng` = ADMIN（全部能力），`test001` = OBSERVER（仅 READ）；权限仍 fail-closed，`X-NoahsArk-Role` 仅保留为开发兼容路径。
+- 验证：`pytest --disable-warnings` 104 passed；`ruff check noahsark tests` 通过；`mypy noahsark` 通过；`alembic current` 为 `b2f1a4c7d902 (head)`，`alembic check` 无新增迁移。
+- 证据：[`evidence/b2-accounts-auth.md`](./evidence/b2-accounts-auth.md)。真实口令未创建、未写入仓库或日志；需由操作方以 `NOAHSARK_ADMIN_PASSWORD` / `NOAHSARK_OBSERVER_PASSWORD` 安全注入后执行 `python -m noahsark.bootstrap_accounts`。
