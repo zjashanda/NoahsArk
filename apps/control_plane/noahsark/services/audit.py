@@ -213,6 +213,8 @@ async def append_event(
     correlation_id: str | None,
     path: str,
     occurred_at: datetime | None = None,
+    access_decision: str = "ALLOW",
+    result: str = "SUCCESS",
 ) -> AuditEvent:
     """Append one hash-chained event.  Never updates or deletes history."""
 
@@ -244,8 +246,8 @@ async def append_event(
         reason=reason,
         correlation_id=correlation_id,
         correlation={"path": path, "append_only": True},
-        access_decision="ALLOW",
-        result="SUCCESS",
+        access_decision=access_decision,
+        result=result,
         integrity="HASH_CHAIN_OK",
         prev_event_hash=prev_hash,
         event_hash=digest,

@@ -6,6 +6,7 @@ control-plane data from UI fixtures without inspecting individual fields.
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -22,6 +23,7 @@ from ..errors import ApiError
 SOURCE = "control-plane"
 SCHEMA_VERSION = "1.0"
 CORRELATION_HEADER = "X-Correlation-ID"
+_SAFE_CORRELATION_ID = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 
 
 def utc_iso(value: datetime | None = None) -> str:
@@ -29,6 +31,18 @@ def utc_iso(value: datetime | None = None) -> str:
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=UTC)
     return moment.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+def safe_correlation_id(value: str | None) -> str:
+    """Return a bounded, log-safe correlation id.
+
+    Client-supplied values are accepted only when they cannot inject log
+    separators or unbounded text; everything else gets a fresh UUID.
+    """
+
+    if value is not None and _SAFE_CORRELATION_ID.fullmatch(value):
+        return value
+    return uuid.uuid4().hex
 
 
 def correlation_id(request: Request) -> str:
@@ -64,7 +78,7 @@ def error_body(request: Request, exc: ApiError) -> dict[str, Any]:
 
 
 async def correlation_middleware(request: Request, call_next):
-    cid = request.headers.get(CORRELATION_HEADER) or uuid.uuid4().hex
+    cid = safe_correlation_id(request.headers.get(CORRELATION_HEADER))
     request.state.correlation_id = cid
     response = await call_next(request)
     response.headers[CORRELATION_HEADER] = cid

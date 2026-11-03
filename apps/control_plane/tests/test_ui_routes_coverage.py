@@ -125,13 +125,26 @@ def test_routes_json_has_39_routes_and_mapping_covers_all():
 
 
 # W3 write templates that legitimately share a path with a UI read template.
-# IN-01/IN-02 read the intake draft collection; creating a draft is a POST on
-# the same path.  No other UI template may expose a non-GET method.
+# IN-01/IN-02 read the intake draft collection and TK-01 reads the task
+# collection; creating a draft or task is a POST on the same path.  No other UI
+# template may expose a non-GET method.
 WRITE_POST_TEMPLATES = {
     "/api/v1/intake/drafts",
+    "/api/v1/tasks",
     "/api/v1/tasks/{task_id}/approvals",
     "/api/v1/runs/{run_id}/stop-requests",
     "/api/v1/devices/{device_id}/release-requests",
+    "/api/v1/runs/{run_id}/verdicts",
+    "/api/v1/tasks/{task_id}/reports",
+    "/api/v1/reports/{report_id}/freeze",
+    "/api/v1/knowledge/candidates/{candidate_id}/promotions",
+}
+
+# ADMIN-only node/device CRUD adds writes to UI read templates.
+WRITE_EXTRA_METHODS = {
+    "/api/v1/devices": {"post"},
+    "/api/v1/devices/{device_id}": {"patch", "delete"},
+    "/api/v1/nodes/{node_id}": {"patch", "delete"},
 }
 
 
@@ -143,7 +156,9 @@ def test_every_ui_route_maps_to_a_get_read_endpoint():
         operations = set(paths[template])
         assert "get" in operations, f"{route_id} {template} is not readable"
         extra = operations - {"get"}
-        expected_extra = {"post"} if template in WRITE_POST_TEMPLATES else set()
+        expected_extra = (
+            {"post"} if template in WRITE_POST_TEMPLATES else set()
+        ) | WRITE_EXTRA_METHODS.get(template, set())
         assert extra == expected_extra, (
             f"{route_id} {template} exposes {operations}"
         )

@@ -919,6 +919,91 @@ async def _progress(
     )
 
 
+def _task_card(
+    task: Task,
+    run: Run | None,
+    node: Node | None,
+    device: Device | None,
+    lease: Lease | None,
+    counts: dict[str, int],
+    progress: dict[str, Any],
+    release: dict[str, Any],
+) -> dict[str, Any]:
+    """Persistent task-card projection derived only from authoritative rows."""
+
+    communication_state = (
+        run.communication_state
+        if run is not None
+        else node.communication_state
+        if node is not None
+        else None
+    )
+    freshness = _freshness(
+        communication_state, ("run", run), ("node", node), ("task", task)
+    )
+    blocker: dict[str, Any] = {
+        "blocked": False,
+        "owner": None,
+        "reason": None,
+        "next_step": None,
+    }
+    if run is not None and run.failure_classification is not None:
+        blocker = {
+            "blocked": True,
+            "owner": "Platform",
+            "reason": run.failure_classification,
+            "next_step": "Review failure classification before resuming.",
+        }
+    elif run is not None and run.stop_requested_at is not None:
+        blocker = {
+            "blocked": True,
+            "owner": "Session Manager",
+            "reason": "STOP_REQUESTED",
+            "next_step": "Confirm STOP delivery and reconcile occupancy.",
+        }
+    elif release["release_state"] in {
+        "held",
+        "held_pending_cleanup",
+        "held_pending_reconciliation",
+        "quarantined",
+    }:
+        blocker = {
+            "blocked": True,
+            "owner": "Session Manager",
+            "reason": release["release_state"],
+            "next_step": "Resolve release preconditions: "
+            + ", ".join(release["missing"]),
+        }
+    resources = {
+        "node_id": _uid(node.node_id) if node is not None else None,
+        "node_display_id": node.display_id if node is not None else None,
+        "device_id": _uid(device.device_id) if device is not None else None,
+        "device_display_id": device.display_id if device is not None else None,
+        "lease_id": _uid(lease.lease_id) if lease is not None else None,
+        "lease_state": lease.state if lease is not None else None,
+        "lease_epoch": lease.epoch if lease is not None else None,
+    }
+    return {
+        "task_id": _uid(task.task_id),
+        "display_id": task.display_id,
+        "task_title": task.title,
+        "stage": task.status,
+        "status_display": task.status,
+        "run_state": run.lifecycle_status if run is not None else "NO_ACTIVE_RUN",
+        "axes": _axes(run),
+        "resources": resources,
+        "blocker": blocker,
+        "gates": {"passed": 0, "total": 0, "items": []},
+        "progress": progress,
+        "counts": counts,
+        "communication": {"state": communication_state},
+        "freshness": freshness,
+        "last_authoritative_update": freshness["last_authoritative_update"],
+        "last_known_at": freshness["last_known_at"],
+        "release_state": release["release_state"],
+    }
+
+
 async def _task_summary(session: AsyncSession, task: Task) -> dict[str, Any]:
     revision = None
     if task.current_revision_id is not None:
@@ -928,19 +1013,31 @@ async def _task_summary(session: AsyncSession, task: Task) -> dict[str, Any]:
     node = await session.get(Node, run.node_id) if run and run.node_id else None
     if node is None and lease is not None:
         node = await session.get(Node, lease.node_id)
+    device = await session.get(Device, run.device_id) if run and run.device_id else None
+    if device is None and lease is not None:
+        device = await session.get(Device, lease.device_id)
     axes = _axes(run)
     release = _release(lease, run, node)
     counts = await _evidence_counts(session, task.task_id)
     progress = await _progress(
         session, task, revision.revision_id if revision is not None else None
     )
+    lead_agent = (
+        await session.get(Agent, task.lead_agent_id)
+        if task.lead_agent_id is not None
+        else None
+    )
     return {
         "task_id": _uid(task.task_id),
         "display_id": task.display_id,
         "title": task.title,
+        "lead_agent_id": _uid(task.lead_agent_id),
+        "lead_agent_display_id": lead_agent.display_id if lead_agent is not None else None,
+        "lead_agent_name": lead_agent.name if lead_agent is not None else None,
         "objective": task.objective,
         "task_category": task.task_category,
         "entry_mode": task.entry_mode,
+        "execution_context": dict(task.execution_context or {}),
         "status": task.status,
         **axes,
         "axes": axes,
@@ -957,6 +1054,9 @@ async def _task_summary(session: AsyncSession, task: Task) -> dict[str, Any]:
         "evidence_counts": counts,
         "counts": counts,
         "progress": progress,
+        "task_card": _task_card(
+            task, run, node, device, lease, counts, progress, release
+        ),
         "created_at": _iso(task.created_at),
         "updated_at": _iso(task.updated_at),
     }

@@ -8,7 +8,7 @@ always validated server-side and can never be downgraded to its header claims.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from typing import Annotated
 
 from fastapi import Depends, Header
@@ -17,8 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import settings
 from ..db import get_optional_session
 from ..domain.permissions import Capability, ensure_capability
-from ..errors import forbidden
+from ..errors import ApiError, forbidden
+from ..integrations.opencode.errors import OpenCodeConfigError
+from ..integrations.opencode.http_provider import OpenCodeHTTPProvider
+from ..integrations.opencode.protocol import OpenCodeProvider
 from ..services.auth import Credentials, Principal, build_provider
+from ..supervisor.config import SupervisorSettings
 
 ROLE_OBSERVER = "OBSERVER"
 ROLE_APPROVER = "APPROVER"
@@ -32,6 +36,14 @@ CAP_APPROVE = "APPROVE"
 CAP_STOP = "STOP"
 CAP_RELEASE = "RELEASE"
 CAP_DEVICE_CONTROL = "DEVICE_CONTROL"
+CAP_EVIDENCE_WRITE = "EVIDENCE_WRITE"
+CAP_EVIDENCE_RAW = "EVIDENCE_RAW"
+CAP_VERDICT_WRITE = "VERDICT_WRITE"
+CAP_REPORT_WRITE = "REPORT_WRITE"
+CAP_KNOWLEDGE_PROMOTE = "KNOWLEDGE_PROMOTE"
+CAP_KNOWLEDGE_MERGE_COMMON = "KNOWLEDGE_MERGE_COMMON"
+CAP_KNOWLEDGE_MERGE_TOOL = "KNOWLEDGE_MERGE_TOOL"
+CAP_KNOWLEDGE_PROMOTE_ANOMALY = "KNOWLEDGE_PROMOTE_ANOMALY"
 
 ALL_CAPABILITIES = frozenset(
     {
@@ -41,6 +53,14 @@ ALL_CAPABILITIES = frozenset(
         CAP_STOP,
         CAP_RELEASE,
         CAP_DEVICE_CONTROL,
+        CAP_EVIDENCE_WRITE,
+        CAP_EVIDENCE_RAW,
+        CAP_VERDICT_WRITE,
+        CAP_REPORT_WRITE,
+        CAP_KNOWLEDGE_PROMOTE,
+        CAP_KNOWLEDGE_MERGE_COMMON,
+        CAP_KNOWLEDGE_MERGE_TOOL,
+        CAP_KNOWLEDGE_PROMOTE_ANOMALY,
     }
 )
 
@@ -120,3 +140,33 @@ def require_capability(capability: Capability | str) -> Callable:
         return principal
 
     return dependency
+
+
+async def get_opencode_provider() -> AsyncIterator[OpenCodeProvider]:
+    """Yield the configured, single-attempt OpenCode read client.
+
+    The provider is constructed per request so the API follows the same
+    environment configuration as the supervisor worker.  Missing configuration
+    is a typed 502 rather than a silent fallback to fake content.
+    """
+
+    try:
+        config = SupervisorSettings().provider_config()
+    except (OpenCodeConfigError, ValueError) as exc:
+        provider_code = (
+            exc.code
+            if isinstance(exc, OpenCodeConfigError)
+            else "OPENCODE_CONFIG_INVALID"
+        )
+        raise ApiError(
+            502,
+            "PROVIDER_UNAVAILABLE",
+            "OpenCode provider is not configured",
+            retryable=True,
+            details={"provider_code": provider_code},
+        ) from exc
+    provider = OpenCodeHTTPProvider(config)
+    try:
+        yield provider
+    finally:
+        await provider.aclose()

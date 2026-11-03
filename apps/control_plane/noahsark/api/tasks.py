@@ -13,13 +13,15 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
-from ..services import read_models
-from .deps import get_principal
+from ..integrations.opencode.protocol import OpenCodeProvider
+from ..services import read_models, supervision
+from .deps import get_opencode_provider, get_principal
 from .envelope import success
 
 router = APIRouter(tags=["tasks"], dependencies=[Depends(get_principal)])
 
 Session = Annotated[AsyncSession, Depends(get_session)]
+Provider = Annotated[OpenCodeProvider, Depends(get_opencode_provider)]
 Limit = Annotated[int, Query(ge=1, le=200)]
 
 
@@ -41,6 +43,28 @@ async def get_task(
     session: Session,
 ) -> dict:
     return success(request, await read_models.get_task(session, task_id))
+
+
+@router.get("/tasks/{task_id}/supervisor")
+async def get_task_supervisor(
+    task_id: str,
+    request: Request,
+    session: Session,
+) -> dict:
+    return success(request, await supervision.get_task_supervisor(session, task_id))
+
+
+@router.get("/tasks/{task_id}/session/messages")
+async def get_task_session_messages(
+    task_id: str,
+    request: Request,
+    session: Session,
+    provider: Provider,
+) -> dict:
+    return success(
+        request,
+        await supervision.get_task_session_messages(session, task_id, provider),
+    )
 
 
 @router.get("/tasks/{task_id}/overview")

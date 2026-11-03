@@ -31,16 +31,38 @@ client = TestClient(app)
 # asserted exactly; any additional non-GET /api/v1 operation fails the test.
 W3_WRITE_OPERATIONS = {
     ("/api/v1/intake/drafts", "post"),
+    ("/api/v1/tasks", "post"),
     ("/api/v1/tasks/{task_id}/approvals", "post"),
     ("/api/v1/runs/{run_id}/stop-requests", "post"),
     ("/api/v1/devices/{device_id}/release-requests", "post"),
+    # B2 development session surface (explicitly not production auth).
+    ("/api/v1/auth/dev-login", "post"),
+    ("/api/v1/auth/logout", "post"),
+    # W4 write surface: verdict derivation, reports and knowledge promotion.
+    ("/api/v1/runs/{run_id}/verdicts", "post"),
+    ("/api/v1/tasks/{task_id}/reports", "post"),
+    ("/api/v1/reports/{report_id}/freeze", "post"),
+    ("/api/v1/knowledge/candidates/{candidate_id}/promotions", "post"),
+    # Node/device topology management (ADMIN-only CRUD).
+    ("/api/v1/nodes", "post"),
+    ("/api/v1/nodes/{node_id}", "patch"),
+    ("/api/v1/nodes/{node_id}", "delete"),
+    ("/api/v1/devices", "post"),
+    ("/api/v1/devices/{device_id}", "patch"),
+    ("/api/v1/devices/{device_id}", "delete"),
 }
 
 W3_WRITE_PATHS = {path for path, _method in W3_WRITE_OPERATIONS}
 
-# Only the intake collection is both a UI read route and a W3 write target.
-# The other three templates are write-only and must never expose GET.
-W3_READ_WRITE_PATHS = {"/api/v1/intake/drafts"}
+# The intake and task collections are both UI read routes and write targets.
+# The other write templates are write-only and must never expose GET.
+W3_READ_WRITE_PATHS = {
+    "/api/v1/intake/drafts",
+    "/api/v1/tasks",
+    "/api/v1/devices",
+    "/api/v1/devices/{device_id}",
+    "/api/v1/nodes/{node_id}",
+}
 
 BATCH3_ENDPOINTS = [
     "/api/v1/knowledge",
@@ -278,14 +300,16 @@ def test_settings_expose_no_secrets_and_keep_categories(seeded_database):
     _assert_no_secret_fields(listing)
 
     access = client.get("/api/v1/settings/access").json()["data"]
-    assert access["total_roles"] == 4
-    assert access["total_users"] == 5
-    assert {role["role_code"] for role in access["roles"]} == {
+    # Bootstrap accounts may add row(s) after a seed reset; the roles and
+    # users that define the prototype contract must always be present.
+    assert access["total_roles"] >= 4
+    assert access["total_users"] >= 5
+    assert {
         "SUPER_ADMIN",
         "SESSION_MANAGER",
         "APPROVER",
         "OBSERVER",
-    }
+    }.issubset({role["role_code"] for role in access["roles"]})
     assert access["secrets_exposed"] is False
     _assert_no_secret_fields(access)
 
@@ -372,7 +396,11 @@ def test_batch3_exposes_no_write_endpoints(seeded_database):
     for path, operations in schema["paths"].items():
         if path.startswith("/api/v1"):
             if path in W3_WRITE_PATHS:
-                allowed = {"post"}
+                allowed = {
+                    method
+                    for template, method in W3_WRITE_OPERATIONS
+                    if template == path
+                }
                 if path in W3_READ_WRITE_PATHS:
                     allowed.add("get")
             else:

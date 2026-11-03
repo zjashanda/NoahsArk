@@ -33,7 +33,8 @@ class Role(Base, ProvenanceMixin):
 
     __table_args__ = (
         CheckConstraint(
-            "role_code IN ('SUPER_ADMIN','SESSION_MANAGER','APPROVER','OBSERVER')",
+            "role_code IN "
+            "('SUPER_ADMIN','ADMIN','SESSION_MANAGER','APPROVER','OBSERVER')",
             name="role_code_closed",
         ),
     )
@@ -52,6 +53,10 @@ class User(Base, SchemaVersionMixin, ProvenanceMixin, CreatedAtMixin):
         String(32), ForeignKey("roles.role_code"), nullable=False
     )
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE")
+    # Argon2id digest only.  The plaintext credential is never persisted,
+    # logged, audited or serialized.  ``None`` means the account has no local
+    # password (for example a service identity) and therefore cannot log in.
+    password_hash: Mapped[str | None] = mapped_column(String(255))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (

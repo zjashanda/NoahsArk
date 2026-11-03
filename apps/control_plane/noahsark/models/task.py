@@ -33,6 +33,9 @@ class Task(Base, SchemaVersionMixin, ProvenanceMixin, CreatedAtMixin):
     objective: Mapped[str] = mapped_column(Text, nullable=False)
     entry_mode: Mapped[str] = mapped_column(String(32), nullable=False)
     origin: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    execution_context: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     lead_agent_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("agents.agent_id"), nullable=False

@@ -27,6 +27,16 @@ _engine = _build_engine()
 _session_factory = async_sessionmaker(_engine, expire_on_commit=False) if _engine else None
 
 
+def get_session_factory() -> async_sessionmaker[AsyncSession] | None:
+    """Return the shared session factory, or ``None`` without PostgreSQL.
+
+    Background tasks (for example the node staleness sweeper) need the same
+    factory the request dependencies use but cannot depend on FastAPI.
+    """
+
+    return _session_factory
+
+
 async def get_session() -> AsyncIterator[AsyncSession]:
     """FastAPI dependency.  Fails closed (503) instead of falling back to SQLite."""
 

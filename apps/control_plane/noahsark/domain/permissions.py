@@ -4,7 +4,8 @@ Clients never decide what they may do: the role header is only an identity
 claim and every write re-checks the capability on the server.  Unknown roles
 fail closed with ``403 FORBIDDEN``.
 
-The five capabilities map to the four W3 write intents plus read/settings:
+The capabilities map to the four W3 write intents plus read/settings and the
+W3 evidence-storage raw/write boundary:
 
 =================  ==========================================================
 Capability         Meaning
@@ -16,6 +17,11 @@ STOP               Request a run STOP (a request, never an execution fact).
 RELEASE            Request device/lease release (a request, not a release).
 DEVICE_CONTROL     Device control operations (reserved for later waves).
 SETTINGS           Change control-plane settings (reserved for later waves).
+EVIDENCE_WRITE     Receive or re-verify evidence blobs.
+EVIDENCE_RAW       Read original evidence bytes (not summary metadata).
+VERDICT_WRITE      Derive and persist the Linux five-axis verdict.
+REPORT_WRITE       Create and freeze versioned acceptance reports.
+KNOWLEDGE_*        Review and promote knowledge candidates (never automatic).
 =================  ==========================================================
 """
 
@@ -34,6 +40,14 @@ class Capability(StrEnum):
     RELEASE = "RELEASE"
     DEVICE_CONTROL = "DEVICE_CONTROL"
     SETTINGS = "SETTINGS"
+    EVIDENCE_WRITE = "EVIDENCE_WRITE"
+    EVIDENCE_RAW = "EVIDENCE_RAW"
+    VERDICT_WRITE = "VERDICT_WRITE"
+    REPORT_WRITE = "REPORT_WRITE"
+    KNOWLEDGE_PROMOTE = "KNOWLEDGE_PROMOTE"
+    KNOWLEDGE_MERGE_COMMON = "KNOWLEDGE_MERGE_COMMON"
+    KNOWLEDGE_MERGE_TOOL = "KNOWLEDGE_MERGE_TOOL"
+    KNOWLEDGE_PROMOTE_ANOMALY = "KNOWLEDGE_PROMOTE_ANOMALY"
 
 
 ALL_CAPABILITIES: frozenset[Capability] = frozenset(Capability)
