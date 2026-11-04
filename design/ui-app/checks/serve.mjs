@@ -50,6 +50,8 @@ async function proxy(request, response, url) {
   delete headers.connection;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 180000);
+  const abortOnClose = () => controller.abort();
+  response.once("close", abortOnClose);
   try {
     const upstreamResponse = await fetch(`${upstream}${url.pathname}${url.search}`, {
       method: request.method,
@@ -57,15 +59,31 @@ async function proxy(request, response, url) {
       body: request.method === "GET" || request.method === "HEAD" ? undefined : body,
       signal: controller.signal
     });
-    const bytes = Buffer.from(await upstreamResponse.arrayBuffer());
     const out = {};
     for (const [key, value] of upstreamResponse.headers.entries()) {
       if (["content-encoding", "transfer-encoding", "connection"].includes(key)) continue;
       out[key] = value;
     }
+    const contentType = String(out["content-type"] || "");
+    if (contentType.includes("text/event-stream") && upstreamResponse.body) {
+      // SSE must pass through as chunks. Buffering the whole body here would
+      // make the Agent process dialog appear empty until the turn ends.
+      response.writeHead(upstreamResponse.status, { ...out, "cache-control": "no-store" });
+      response.flushHeaders?.();
+      const reader = upstreamResponse.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) response.write(Buffer.from(value));
+      }
+      response.end();
+      return;
+    }
+    const bytes = Buffer.from(await upstreamResponse.arrayBuffer());
     response.writeHead(upstreamResponse.status, { ...out, "cache-control": "no-store" });
     response.end(bytes);
   } catch (error) {
+    if (response.writableEnded || response.destroyed) return;
     const aborted = error && error.name === "AbortError";
     sendJson(response, aborted ? 504 : 502, {
       error: {
@@ -76,6 +94,7 @@ async function proxy(request, response, url) {
     });
   } finally {
     clearTimeout(timer);
+    response.off("close", abortOnClose);
   }
 }
 

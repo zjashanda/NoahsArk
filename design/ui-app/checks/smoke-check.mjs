@@ -350,6 +350,7 @@ check(fixtureNodes.includes("data-node-manage-dialog") && fixtureNodes.includes(
 check(fixtureNodes.includes("data-device-serial-group") && fixtureNodes.includes("data-device-audio-group"), "Add-device dialog exposes serial roles and audio channels");
 check(fixtureNodes.includes("disabled aria-disabled=\"true\""), "fixture mode keeps topology writes disabled");
 check(fixtureNodes.includes("扫描 USB") && fixtureNodes.includes("data-usb-scan-start") && fixtureNodes.includes("扫描结果"), "Nodes dialog exposes the USB scan action and result container");
+check(fixtureNodes.includes("data-usb-board-detail-dialog") && fixtureNodes.includes("板卡详情"), "Nodes dialog mounts a board detail dialog");
 check(typeof devices.hydrate === "function", "Nodes page exports the add-node dialog hydration");
 
 // The live WIN009 usbTree output is the parser contract: boards, serial roles,
@@ -445,6 +446,8 @@ check(readyHtml.includes("PONG"), "task conversation renders result.summary and 
 check(readyHtml.includes("Reply with the single word PONG and nothing else."), "task conversation renders the user prompt");
 check(readyHtml.includes("data-chat-form") && readyHtml.includes("data-chat-input"), "task conversation has a persistent composer");
 check(readyHtml.includes("data-chat-run-status") && readyHtml.includes("chat-run-dots"), "task conversation mounts an in-thread running indicator");
+check(readyHtml.includes('id="run-details-dialog"') && readyHtml.includes("data-run-tab") && readyHtml.includes("运行详情"), "task conversation mounts the run-details dialog with tabs");
+check(readyHtml.includes('id="task-result"') && !readyHtml.includes("run-summary-raw"), "run details show the acceptance summary directly in the fixed pane");
 check(readyHtml.includes("data-inspector") && readyHtml.includes("data-inspector-toggle"), "task detail mounts the collapsible Inspector");
 check(readyHtml.includes("Supervisor ID") && readyHtml.includes("消息数") && readyHtml.includes("模型"), "Inspector exposes supervisor id, message count and model");
 check(readyHtml.includes("data-delete-task"), "task detail header exposes delete");
@@ -559,6 +562,7 @@ check(traceHtml.includes("耗时 02:07") && traceHtml.includes("Supervisor 耗�
 check(traceHtml.includes("产物 · 2 项"), "timeline consolidates uploaded artifacts into one milestone");
 check(traceHtml.includes("结果与日志") && traceHtml.includes("summary_final.json") && traceHtml.includes("COM3_csk_ap.log"), "task detail lists uploaded logs and artifacts");
 check(traceHtml.includes('data-artifact-action="view"') && traceHtml.includes('data-artifact-action="download"'), "task artifacts expose view and download actions");
+check(traceHtml.includes('data-artifact-campaign="e7f0f35b-65a9-48f9-89ed-d7d73d490310"') && traceHtml.includes("wake-recognition"), "artifact files are grouped under their campaign name");
 check(!traceHtml.includes('data-trace-kind="message"'), "timeline does not duplicate conversation messages");
 check(traceHtml.includes("data-trace-degraded") && traceHtml.includes("PROVIDER_UNAVAILABLE") && traceHtml.includes("HTTP 502"), "timeline shows a degraded note for a 502 session and keeps the campaign events");
 check(traceHtml.includes("5/5") && traceHtml.includes("5 / 5"), "timeline surfaces the 5/5 campaign outcome and round count");

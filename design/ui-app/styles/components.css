@@ -1740,15 +1740,148 @@
   display: flex;
   align-items: center;
   gap: var(--naa-space-2);
+  width: 100%;
   padding: 6px var(--naa-space-4);
+  border: 0;
   border-top: 1px solid var(--naa-line);
   background: var(--naa-surface-sunken);
   color: var(--naa-ink-secondary);
+  font: inherit;
   font-size: var(--naa-type-small);
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-run-status:hover {
+  background: var(--naa-surface-raised);
+}
+
+.chat-run-status:focus-visible {
+  outline: 2px solid var(--naa-action);
+  outline-offset: -2px;
+}
+
+.chat-run-action {
+  margin-left: auto;
+  color: var(--naa-action);
+  font-size: var(--naa-type-small);
+  font-weight: 600;
+}
+
+dialog.task-delete-dialog.chat-process-dialog {
+  width: min(1100px, 94vw);
+}
+
+.chat-process-card {
+  display: flex;
+  flex-direction: column;
+  max-height: min(86vh, 900px);
+}
+
+.chat-process-stream {
+  flex: 1;
+  min-height: 280px;
+  max-height: 64vh;
+  margin: 0;
+  padding: var(--naa-space-3);
+  overflow: auto;
+  border: 1px solid var(--naa-line);
+  border-radius: var(--naa-radius-sm);
+  background: var(--naa-surface-sunken);
+  color: var(--naa-ink-primary);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .chat-run-status[hidden] {
   display: none;
+}
+
+dialog.task-delete-dialog.run-details-dialog {
+  width: min(1280px, 96vw);
+}
+
+.run-details-card {
+  display: flex;
+  flex-direction: column;
+  height: min(90vh, 960px);
+  max-height: min(90vh, 960px);
+}
+
+.run-details-tabs {
+  display: flex;
+  gap: var(--naa-space-1);
+  padding: 0 var(--naa-space-1);
+  border-bottom: 1px solid var(--naa-line);
+}
+
+.run-details-tab {
+  appearance: none;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--naa-ink-secondary);
+  padding: 8px 12px;
+  font: inherit;
+  font-size: var(--naa-type-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.run-details-tab:hover {
+  color: var(--naa-ink-primary);
+}
+
+.run-details-tab.is-active {
+  color: var(--naa-ink-primary);
+  border-bottom-color: var(--naa-action);
+}
+
+.run-details-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: var(--naa-space-3);
+}
+
+.run-details-body > section {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.run-details-body .panel {
+  border: 0;
+  padding: 0;
+}
+
+.artifact-group + .artifact-group {
+  margin-top: var(--naa-space-4);
+  padding-top: var(--naa-space-4);
+  border-top: 1px solid var(--naa-line);
+}
+
+.artifact-group-head {
+  margin-bottom: var(--naa-space-2);
+}
+
+.artifact-group-title {
+  margin: 0 0 4px;
+  font-size: var(--naa-type-body);
+  font-weight: 650;
+}
+
+.artifact-group-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--naa-space-2);
+  align-items: center;
+  margin: 0;
 }
 
 .chat-run-dots {
@@ -2676,7 +2809,24 @@ dialog.task-create-dialog {
   bottom: var(--naa-space-2);
   z-index: 1;
   display: flex;
+  gap: 4px;
   justify-content: flex-end;
+}
+
+.campaign-action-button {
+  height: 28px;
+  padding: 0 var(--naa-space-2);
+  border-color: transparent;
+  background: transparent;
+  color: var(--naa-ink-secondary);
+  font-weight: 500;
+}
+
+.campaign-action-button:hover,
+.campaign-action-button:focus-visible {
+  border-color: var(--naa-line);
+  background: var(--naa-surface-sunken);
+  color: var(--naa-ink-primary);
 }
 
 /* The delete action overlays the card footer instead of adding height to the
@@ -3063,6 +3213,29 @@ dialog.node-manage-dialog .task-dialog-card {
   gap: 2px;
   min-width: 0;
   flex: 1 1 auto;
+}
+
+.usb-board-main[data-usb-board-open] {
+  cursor: pointer;
+  border-radius: var(--naa-radius-sm);
+  outline-offset: 2px;
+}
+
+.usb-board-main[data-usb-board-open]:hover,
+.usb-board-main[data-usb-board-open]:focus-visible {
+  background: var(--naa-surface-sunken);
+}
+
+dialog.task-delete-dialog.usb-board-detail-dialog {
+  width: min(760px, 92vw);
+}
+
+.usb-board-detail-body .table-wrap {
+  margin-top: var(--naa-space-3);
+}
+
+.usb-board-detail-body .kv {
+  margin-top: 0;
 }
 
 .usb-board-label {

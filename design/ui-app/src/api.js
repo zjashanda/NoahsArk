@@ -103,6 +103,56 @@ export function apiGet(path, options = {}) {
   return apiFetch(path, { ...options, method: "GET" });
 }
 
+// Streaming fetch for Server-Sent Events.  EventSource cannot send the
+// development role/session headers, so the page reads the response body itself.
+export async function apiStream(path, options = {}) {
+  const base = getApiBase().replace(/\/+$/, "");
+  const url = `${base}/api/v1${path}`;
+  const role = currentRole();
+  const session = sessionHeader();
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "text/event-stream",
+        ...session,
+        ...(Object.keys(session).length ? {} : {
+          "X-NoahsArk-Role": role.id,
+          "X-NoahsArk-Actor": `demo-${role.id.toLowerCase()}`
+        }),
+        ...(options.headers || {})
+      },
+      credentials: "same-origin",
+      signal: options.signal
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      return {
+        ok: false,
+        status: response.status,
+        error: (payload && payload.error) || {
+          code: "HTTP_ERROR",
+          message: `HTTP ${response.status}`,
+          retryable: response.status >= 500
+        }
+      };
+    }
+    return { ok: true, status: response.status, body: response.body };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 0,
+      error: {
+        code: error && error.name === "AbortError" ? "STREAM_ABORTED" : "API_UNREACHABLE",
+        message: error && error.name === "AbortError"
+          ? "Stream closed"
+          : "API is unreachable",
+        retryable: true
+      }
+    };
+  }
+}
+
 export function apiPost(path, body, options = {}) {
   return apiFetch(path, {
     ...options,

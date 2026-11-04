@@ -39,7 +39,8 @@ import {
   MAX_TASK_RESOURCES,
   normalizeCampaign,
   sendTaskSessionMessage,
-  stopTestCampaign
+  stopTestCampaign,
+  streamTaskSessionEvents
 } from "../data-source.js";
 import { applyLanguage } from "../i18n.js";
 import { navigate } from "../router.js";
@@ -136,8 +137,8 @@ function campaignActionButton(campaign, options = {}) {
     disabled ? 'disabled aria-disabled="true" title="fixture 演示不会停止或删除真实测试活动"' : ""
   ].filter(Boolean).join(" ");
   const label = active ? "停止" : "删除";
-  const cls = active ? "btn btn-sm" : "btn btn-danger btn-sm";
-  const glyph = active ? icon("stop") : icon("x");
+  const cls = "btn btn-sm campaign-action-button";
+  const glyph = active ? icon("stop") : "";
   return `<button class="${cls}" type="button" ${attrs}>${glyph}${label}</button>`;
 }
 
@@ -274,7 +275,7 @@ function inspectorMarkup(task, supervisor, session) {
         ${inspectorRow("状态", `<span data-inspector-field="state">${stateMarkup(state)}</span>`)}
         ${inspectorRow("最后刷新", `<span data-inspector-field="refreshed">${esc(refreshed)}</span>`)}
         ${inspectorRow("消息数", `<span data-inspector-field="message_count">${esc(values.count)}</span>`)}
-        ${inspectorRow("结果", `<a href="#task-result" data-inspector-field="result">${esc(values.result)}</a>`)}
+        ${inspectorRow("结果", `<a href="#task-result" data-run-details-open data-inspector-field="result">${esc(values.result)}</a>`)}
         ${inspectorRow("错误", `<span data-inspector-field="error">${esc(values.error)}</span>`)}
       </dl>
       <p class="caption">只读投影；remote session 已由服务端掩码。</p>
@@ -972,6 +973,75 @@ function agentStatusMarkup(task, supervisor, session) {
   </div>`;
 }
 
+function chatProcessDialog() {
+  return `
+    <dialog class="task-delete-dialog chat-process-dialog" id="chat-process-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-process-title">
+      <div class="task-dialog-card chat-process-card">
+        <div class="task-dialog-head">
+          <div>
+            <h2 class="task-dialog-title" id="chat-process-title">Agent 执行过程</h2>
+            <p class="caption" data-chat-process-status role="status" aria-live="polite">等待执行事件…</p>
+          </div>
+          <button class="btn btn-sm" type="button" data-chat-process-close>关闭</button>
+        </div>
+        <pre class="chat-process-stream mono" data-chat-process-stream aria-live="polite"></pre>
+        <p class="caption">只读过程流 · 关闭窗口不会停止任务；断线时自动回退到会话轮询。</p>
+      </div>
+    </dialog>
+  `;
+}
+
+function runSummaryMarkup(view, task, supervisor) {
+  const campaign = (Array.isArray(view.taskCampaigns) ? view.taskCampaigns : [])
+    .map(normalizeCampaign)
+    .find((item) => item.id && task && item.task_id === task.id) || null;
+  const rows = [
+    ["会话状态", stateMarkup(supervisor && supervisor.state)],
+    ["测试活动", campaign
+      ? `<span class="mono">${esc(campaign.id)}</span> · ${statusBadge(campaign.status)}`
+      : "该任务没有关联测试活动"],
+    ["结果", campaign ? badge(campaign.outcome.label, campaign.outcome.tone) : "—"],
+    ["轮次", campaign ? `${esc(campaign.rounds_count)} / ${esc(campaign.rounds)}` : "—"],
+    ["耗时", campaign && campaign.started_at && campaign.finished_at
+      ? traceDuration(campaign.started_at, campaign.finished_at) || "—"
+      : "—"]
+  ];
+  return `${kv(rows)}${resultMarkup(supervisor)}`;
+}
+
+function runDetailsDialog(view, task, supervisor) {
+  const apiMode = Boolean(view.meta && view.meta.server_authoritative);
+  return `
+    <dialog class="task-delete-dialog run-details-dialog" id="run-details-dialog" role="dialog" aria-modal="true" aria-labelledby="run-details-title">
+      <div class="task-dialog-card run-details-card">
+        <div class="task-dialog-head">
+          <div>
+            <h2 class="task-dialog-title" id="run-details-title">运行详情</h2>
+            <p class="caption">验收摘要、结果与日志、执行时间线。只读；三类内容使用同一固定大小。</p>
+          </div>
+          <button class="btn btn-sm" type="button" data-run-details-close>关闭</button>
+        </div>
+        <div class="run-details-tabs" role="tablist" aria-label="运行详情分类">
+          <button class="run-details-tab is-active" type="button" role="tab" aria-selected="true" data-run-tab="summary">验收摘要</button>
+          <button class="run-details-tab" type="button" role="tab" aria-selected="false" data-run-tab="artifacts">结果与日志</button>
+          <button class="run-details-tab" type="button" role="tab" aria-selected="false" data-run-tab="timeline">执行时间线</button>
+        </div>
+        <div class="run-details-body">
+          <section data-run-pane="summary">
+            <div id="task-result">${runSummaryMarkup(view, task, supervisor)}</div>
+          </section>
+          <section data-run-pane="artifacts" hidden>
+            ${apiMode ? taskArtifactSection(view, task, apiMode) : '<p class="muted small">fixture 模式没有上传产物。</p>'}
+          </section>
+          <section data-run-pane="timeline" hidden>
+            ${tracePanelMarkup(view, task)}
+          </section>
+        </div>
+      </div>
+    </dialog>
+  `;
+}
+
 function chatPanel(view, task, supervisor, session, demo) {
   const messages = (session && session.messages) || [];
   const refreshed = localTimestamp(new Date().toISOString());
@@ -983,6 +1053,7 @@ function chatPanel(view, task, supervisor, session, demo) {
           <span class="caption chat-head-note" title="只读 Supervisor 状态仅表示会话生命周期，不构成任务判定。">Supervisor 只读</span>
           <span class="sr-only" data-chat-state>${stateMarkup(supervisor && supervisor.state)}</span>
           <time class="sr-only" data-chat-refreshed datetime="${esc(new Date().toISOString())}">${esc(refreshed)}</time>
+          <button class="btn btn-sm" type="button" data-run-details-open>运行详情</button>
           <button class="btn btn-sm" type="button" data-inspector-toggle aria-expanded="true" aria-controls="task-inspector">Inspector</button>
           ${demo ? badge("DEMO", "plain") : button("刷新", { action: "refresh-chat", small: true, icon: "refresh" })}
         </div>
@@ -992,12 +1063,15 @@ function chatPanel(view, task, supervisor, session, demo) {
       <div class="chat-history" data-chat-history role="log" aria-live="polite" aria-relevant="additions" aria-label="任务会话内容">
         ${messagesHtml(messages, emptyNoteFor(session))}
       </div>
-      <div class="chat-run-status" data-chat-run-status hidden aria-live="polite">
+      <button class="chat-run-status" type="button" data-chat-run-status data-chat-run-open hidden aria-haspopup="dialog" aria-controls="chat-process-dialog" title="查看 Agent 执行过程" aria-live="polite">
         <span class="chat-run-dots" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="chat-run-label" data-chat-run-label></span>
         <span class="chat-run-elapsed mono" data-chat-run-elapsed></span>
-      </div>
+        <span class="chat-run-action">查看过程</span>
+      </button>
       ${composerMarkup(supervisor, session, demo)}
+      ${chatProcessDialog()}
+      ${runDetailsDialog(view, task, supervisor)}
     </section>
   `;
 }
@@ -1365,9 +1439,6 @@ function chatDetailBody(view, route, task) {
       ${chatPanel(view, task, supervisor, session, demo)}
       ${inspectorMarkup(task, supervisor, session)}
     </div>
-    <section class="panel task-result-panel" id="task-result">${resultMarkup(supervisor)}</section>
-    ${tracePanelMarkup(view, task)}
-    ${taskArtifactSection(view, task, apiMode)}
     ${taskCampaignSection(view, task, apiMode)}
     ${campaignActionDialog()}
     ${campaignTriggerDialog(view, task, apiMode)}
@@ -1689,6 +1760,27 @@ function campaignArtifactTable(campaign) {
   return artifactFileTable(campaign);
 }
 
+function campaignArtifactGroup(campaign) {
+  const title = campaign.title || campaign.scenario || campaign.id;
+  const when = campaign.finished_at || campaign.started_at || campaign.created_at;
+  return `
+    <section class="artifact-group" data-artifact-campaign="${esc(campaign.id)}">
+      <header class="artifact-group-head">
+        <div>
+          <h3 class="artifact-group-title">${esc(title)}</h3>
+          <p class="caption artifact-group-meta">
+            <span class="mono">${esc(campaign.id)}</span>
+            <span>${statusBadge(campaign.status)}</span>
+            <span>${badge(campaign.outcome.label, campaign.outcome.tone)}</span>
+            <span>${esc(when ? localTimestamp(when) : "—")}</span>
+          </p>
+        </div>
+      </header>
+      ${artifactFileTable(campaign)}
+    </section>
+  `;
+}
+
 function taskArtifactFiles(view, task) {
   return (Array.isArray(view.taskCampaigns) ? view.taskCampaigns : [])
     .map(normalizeCampaign)
@@ -1713,10 +1805,15 @@ function taskArtifactSection(view, task, apiMode) {
     seen.add(campaign.id);
     campaigns.push(campaign);
   });
+  campaigns.sort((left, right) => {
+    const a = Date.parse(left.finished_at || left.started_at || left.created_at || "") || 0;
+    const b = Date.parse(right.finished_at || right.started_at || right.created_at || "") || 0;
+    return b - a;
+  });
   return panel({
     title: "结果与日志",
-    note: "查看文本日志，或下载原始文件；内容来自平台产物库，不是模型摘要。",
-    body: `${campaigns.map((campaign) => artifactFileTable(campaign, { showCampaign: campaigns.length > 1 })).join("")}
+    note: "按测试活动分组；查看文本日志，或下载原始文件。内容来自平台产物库，不是模型摘要。",
+    body: `${campaigns.map((campaign) => campaignArtifactGroup(campaign)).join("")}
       <p class="caption" data-artifact-status role="status" aria-live="polite"></p>`
   });
 }
@@ -1743,7 +1840,8 @@ function campaignCard(campaign, options = {}) {
   const href = `/console/tasks?panel=campaigns&campaignId=${encodeURIComponent(campaign.id)}`;
   const title = campaign.title || campaign.scenario || campaign.id;
   const rounds = `${campaign.rounds_count} / ${campaign.rounds}`;
-  const node = compactRef(campaign.node_id);
+  const nodeName = (campaign.node && (campaign.node.display_id || campaign.node.hostname))
+    || compactRef(campaign.node_id);
   const created = campaign.created_at ? localTimestamp(campaign.created_at) : "—";
   return `
     <article class="task-card campaign-card" data-campaign-row data-campaign-id="${esc(campaign.id)}">
@@ -1754,7 +1852,7 @@ function campaignCard(campaign, options = {}) {
         </div>
         <div class="task-card-idline">${cardTypeBadge("campaign")}<span class="task-card-id mono">${esc(campaign.id)}</span></div>
         <div class="task-card-meta">
-          <span class="task-card-meta-item" title="节点"><span class="task-card-meta-label">节点</span><span class="mono">${esc(node)}</span></span>
+          <span class="task-card-meta-item" title="节点 ${esc(nodeName)}"><span class="task-card-meta-label">节点</span><span class="mono">${esc(nodeName)}</span></span>
           <span class="task-card-meta-item" title="已回传 / 目标轮次"><span class="task-card-meta-label">轮次</span><span class="mono">${esc(rounds)}</span></span>
         </div>
         <div class="task-card-foot">
@@ -1762,7 +1860,9 @@ function campaignCard(campaign, options = {}) {
           <span class="caption">创建 <time class="mono" datetime="${esc(campaign.created_at || "")}">${esc(created)}</time></span>
         </div>
       </a>
-      <div class="task-card-actions">${campaignActionButton(campaign, { disabled: options.disabled === true || campaign.demo })}</div>
+      <div class="task-card-actions">
+        ${campaignActionButton(campaign, { disabled: options.disabled === true || campaign.demo })}
+      </div>
     </article>
   `;
 }
@@ -1950,6 +2050,13 @@ function campaignDetailBody(view, params, apiMode) {
   const outcome = campaign.outcome;
   const counts = campaignCounts(campaign);
   const command = campaign.command || {};
+  const nodeLabel = (campaign.node && (campaign.node.display_id || campaign.node.hostname))
+    || compactRef(campaign.node_id);
+  const deviceNames = [...(campaign.devices || []), ...(campaign.node_devices || [])]
+    .map((device) => device && (device.display_id || device.name || device.device_id))
+    .filter(Boolean);
+  const uniqueDeviceNames = [...new Set(deviceNames)];
+  const deviceLabel = uniqueDeviceNames.length ? uniqueDeviceNames.join("、") : "—";
   const commandRows = [
     ["命令状态", campaign.command_status ? statusBadge(campaign.command_status) : "—"],
     ["command_id", `<span class="mono cell-path">${esc(campaign.command_id || "—")}</span>`],
@@ -1964,9 +2071,16 @@ function campaignDetailBody(view, params, apiMode) {
     ${pageHeader({
       eyebrow: `Tasks · 测试活动 · ${view.scenario.id}`,
       title: esc(campaign.title || campaign.scenario),
-      description: `<span class="mono">${esc(campaign.id)}</span> · node <span class="mono">${esc(campaign.node_id || "—")}</span> · ${esc(campaign.scenario)} · bench <span class="mono">${esc(campaign.bench)}</span> · 创建 ${esc(localTimestamp(campaign.created_at))}`,
+      description: `<span class="mono">${esc(campaign.id)}</span> · 节点 <span class="mono">${esc(nodeLabel)}</span> · 设备 <span class="mono">${esc(deviceLabel)}</span> · ${esc(campaign.scenario)} · bench <span class="mono">${esc(campaign.bench)}</span> · 创建 ${esc(localTimestamp(campaign.created_at))}`,
       actions: `${apiMode ? badge("API · server_authoritative", "action") : badge("FIXTURE · DEMO", "plain")}
         ${campaign.demo ? badge("DEMO", "plain") : ""}
+        ${campaign.task_id
+          ? button("返回任务会话", {
+              href: `/console/tasks/${encodeURIComponent(campaign.task_id)}/overview`,
+              kind: "primary",
+              icon: "arrow"
+            })
+          : ""}
         ${button("返回测试活动", { href: "/console/tasks?panel=campaigns", kind: "quiet", icon: "arrow" })}`
     })}
     ${taskAreaTabs("campaigns")}
@@ -2132,6 +2246,12 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
   const runPill = root.querySelector("[data-chat-run-status]");
   const runPillLabel = root.querySelector("[data-chat-run-label]");
   const runPillElapsed = root.querySelector("[data-chat-run-elapsed]");
+  const processDialog = root.querySelector("#chat-process-dialog");
+  const processStatus = root.querySelector("[data-chat-process-status]");
+  const processStream = root.querySelector("[data-chat-process-stream]");
+  const processCloseButtons = processDialog
+    ? Array.from(processDialog.querySelectorAll("[data-chat-process-close]"))
+    : [];
   const refreshButton = root.querySelector('[data-action="refresh-chat"]');
   const inspectorLayout = root.closest("[data-inspector-layout]");
   const inspectorToggle = root.querySelector("[data-inspector-toggle]");
@@ -2147,9 +2267,12 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
   let busy = false;
   let followupWatching = false;
   let followupStartedAt = 0;
-  let followupBaseline = 0;
+  let followupBaseline = new Set();
   let followupNote = "";
   let watchTimer = null;
+  let processController = null;
+  let processEntries = [];
+  const processListener = new AbortController();
   let signature = messageSignature((session && session.messages) || []);
   let firstRender = true;
 
@@ -2216,10 +2339,22 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
     return busy || followupWatching || providerBusy();
   }
 
-  function followupReplySeen() {
+  function messageKey(message) {
+    if (!message) return "";
+    return String(
+      message.message_id
+      || `${message.role || "unknown"}|${message.created_at || ""}|${message.text || ""}`
+    );
+  }
+
+  function followupMessages() {
     return ((session && session.messages) || [])
-      .slice(followupBaseline)
-      .some((message) => message && message.role === "assistant" && String(message.text || "").trim());
+      .filter((message) => message && !followupBaseline.has(messageKey(message)));
+  }
+
+  function followupReplySeen() {
+    return followupMessages()
+      .some((message) => message.role === "assistant" && String(message.text || "").trim());
   }
 
   function finishFollowup(note) {
@@ -2255,9 +2390,9 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
       }
       return "Agent 正在执行…";
     }
-    const messages = ((session && session.messages) || []).slice(followupBaseline);
+    const messages = followupMessages();
     const hasAssistant = messages.some(
-      (message) => message && message.role === "assistant" && String(message.text || "").trim()
+      (message) => message.role === "assistant" && String(message.text || "").trim()
     );
     const hasUser = messages.some(
       (message) => message && message.role === "user" && String(message.text || "").trim()
@@ -2489,7 +2624,9 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
     }
     busy = true;
     followupStartedAt = Date.now();
-    followupBaseline = ((session && session.messages) || []).length;
+    followupBaseline = new Set(
+      ((session && session.messages) || []).map(messageKey).filter(Boolean)
+    );
     followupNote = "";
     // The request can block for minutes while the model answers.  Clear the
     // composer now so the sent text does not stay in the input box; the
@@ -2534,7 +2671,7 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
         syncComposer();
         return;
       }
-      const hasNewActivity = ((session && session.messages) || []).length > followupBaseline;
+      const hasNewActivity = followupMessages().length > 0;
       if (hasNewActivity) {
         // The server now owns the accepted user turn; drop the optimistic row
         // before the next poll renders the authoritative conversation.
@@ -2602,6 +2739,119 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
     schedule();
   }
 
+  function processKey(event) {
+    const part = event && event.part;
+    return String(event.partID || (part && part.id) || event.messageID || "event");
+  }
+
+  function processLabel(event) {
+    const part = event && event.part;
+    if (!part) return "输出";
+    if (part.type === "reasoning") return "思考";
+    if (part.type === "tool") return `工具 · ${part.tool || "unknown"}`;
+    if (part.type === "text") return "回复";
+    return String(part.type || "过程");
+  }
+
+  function processText(part) {
+    if (!part) return "";
+    if (part.type === "tool") {
+      const lines = [];
+      if (part.status) lines.push(`状态：${part.status}`);
+      if (part.input) lines.push(`输入：${typeof part.input === "string" ? part.input : JSON.stringify(part.input)}`);
+      if (part.output) lines.push(`输出：${typeof part.output === "string" ? part.output : JSON.stringify(part.output)}`);
+      return lines.join("\n");
+    }
+    return String(part.text || "");
+  }
+
+  function renderProcess() {
+    if (!processStream) return;
+    processStream.textContent = processEntries
+      .filter((entry) => entry.text)
+      .map((entry) => `[${entry.label}]\n${entry.text}`)
+      .join("\n\n");
+    processStream.scrollTop = processStream.scrollHeight;
+  }
+
+  function upsertProcess(key, label, text, append = false) {
+    let entry = processEntries.find((candidate) => candidate.key === key);
+    if (!entry) {
+      entry = { key, label, text: "" };
+      processEntries.push(entry);
+    }
+    if (label) entry.label = label;
+    entry.text = append ? entry.text + text : text;
+    renderProcess();
+  }
+
+  function applyProcessEvent(event) {
+    if (!event || typeof event !== "object") return;
+    if (event.type === "message.part.delta") {
+      const key = processKey(event);
+      const label = (event.field || "") === "text" ? "输出" : "思考";
+      upsertProcess(key, label, String(event.delta || ""), true);
+      return;
+    }
+    if (event.type === "message.part.updated" && event.part) {
+      const part = event.part;
+      upsertProcess(processKey(event), processLabel(event), processText(part), false);
+      return;
+    }
+    if (event.type === "session.status" && processStatus) {
+      const state = event.status && event.status.type ? event.status.type : "unknown";
+      processStatus.textContent = `会话状态：${state}`;
+      if (state === "idle") processStatus.textContent = "执行已结束";
+    }
+  }
+
+  function setProcessStatus(text, isError = false) {
+    if (!processStatus) return;
+    processStatus.textContent = text || "";
+    processStatus.classList.toggle("is-error", Boolean(isError));
+  }
+
+  function closeProcess() {
+    if (processController) processController.abort();
+    processController = null;
+    if (processDialog && typeof processDialog.close === "function" && processDialog.open) {
+      processDialog.close();
+    } else if (processDialog) {
+      processDialog.removeAttribute("open");
+    }
+  }
+
+  async function openProcess() {
+    if (!processDialog || demo) return;
+    processEntries = [];
+    renderProcess();
+    setProcessStatus("连接执行事件…");
+    if (typeof processDialog.showModal === "function") {
+      if (!processDialog.open) processDialog.showModal();
+    } else {
+      processDialog.setAttribute("open", "");
+    }
+    if (processController) processController.abort();
+    processController = new AbortController();
+    const result = await streamTaskSessionEvents(taskId, {
+      signal: processController.signal,
+      onEvent: (event) => {
+        if (Array.isArray(event)) event.forEach(applyProcessEvent);
+        else applyProcessEvent(event);
+      }
+    });
+    if (disposed || !processController || processController.signal.aborted) return;
+    processController = null;
+    if (!result.ok) {
+      const error = result.error || {};
+      setProcessStatus(`过程流不可用：${error.code || "ERROR"}；继续使用会话轮询。`, true);
+    } else if (result.aborted) {
+      setProcessStatus("已关闭过程流");
+    } else {
+      setProcessStatus("过程流结束；会话轮询继续。");
+    }
+  }
+
   if (form && !demo) {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -2620,6 +2870,20 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
     refreshButton.addEventListener("click", () => {
       void tick();
     });
+  }
+  if (runPill && !demo) {
+    runPill.addEventListener("click", () => {
+      void openProcess();
+    }, { signal: processListener.signal });
+  }
+  processCloseButtons.forEach((button) => {
+    button.addEventListener("click", closeProcess, { signal: processListener.signal });
+  });
+  if (processDialog) {
+    processDialog.addEventListener("close", () => {
+      if (processController) processController.abort();
+      processController = null;
+    }, { signal: processListener.signal });
   }
   if (inspectorToggle) {
     inspectorToggle.addEventListener("click", () => {
@@ -2646,6 +2910,9 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
     watchTimer = null;
     if (statusTimer) window.clearInterval(statusTimer);
     statusTimer = null;
+    processListener.abort();
+    if (processController) processController.abort();
+    processController = null;
   };
 }
 
@@ -2675,6 +2942,47 @@ function hydrateTrace({ host }) {
   return () => {
     if (filter) filter.removeEventListener("input", apply);
   };
+}
+
+function hydrateRunDetails({ host }) {
+  const dialog = host.querySelector("#run-details-dialog");
+  if (!dialog) return null;
+  const openers = Array.from(host.querySelectorAll("[data-run-details-open]"));
+  const closers = Array.from(dialog.querySelectorAll("[data-run-details-close]"));
+  const tabs = Array.from(dialog.querySelectorAll("[data-run-tab]"));
+  const panes = Array.from(dialog.querySelectorAll("[data-run-pane]"));
+  const controller = new AbortController();
+
+  function select(name) {
+    tabs.forEach((tab) => {
+      const active = tab.dataset.runTab === name;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    panes.forEach((pane) => {
+      pane.hidden = pane.dataset.runPane !== name;
+    });
+  }
+
+  function open(event) {
+    if (event) event.preventDefault();
+    select("summary");
+    if (typeof dialog.showModal === "function") {
+      if (!dialog.open) dialog.showModal();
+    } else {
+      dialog.setAttribute("open", "");
+    }
+  }
+
+  function close() {
+    if (typeof dialog.close === "function" && dialog.open) dialog.close();
+    else dialog.removeAttribute("open");
+  }
+
+  openers.forEach((button) => button.addEventListener("click", open, { signal: controller.signal }));
+  closers.forEach((button) => button.addEventListener("click", close, { signal: controller.signal }));
+  tabs.forEach((tab) => tab.addEventListener("click", () => select(tab.dataset.runTab), { signal: controller.signal }));
+  return () => controller.abort();
 }
 
 function hydrateArtifacts({ host }) {
@@ -3660,6 +3968,7 @@ export function hydrate({ route, params, view, mode, host, refresh } = {}) {
     cleanups.push(hydrateCampaignActions({ host, refresh }));
     cleanups.push(hydrateTrace({ host }));
   }
+  cleanups.push(hydrateRunDetails({ host }));
   cleanups.push(hydrateArtifacts({ host }));
   cleanups.push(hydrateDelete({ host, route, refresh }));
   const active = cleanups.filter(Boolean);

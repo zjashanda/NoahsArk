@@ -51,10 +51,53 @@ const DEVICE_KIND_OPTIONS = [
 const usbScanStates = new Map();
 let pendingUsbDialogReopen = null;
 
+function usbScanStorageKey(nodeId) {
+  return `naa-usb-scan:${String(nodeId || "")}`;
+}
+
+function persistUsbScanState(nodeId, state) {
+  if (!nodeId || typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(usbScanStorageKey(nodeId), JSON.stringify({
+      status: state.status,
+      statusText: state.statusText,
+      error: state.error,
+      boards: state.boards,
+      truncated: state.truncated,
+      commandId: state.commandId,
+      lastStatus: state.lastStatus
+    }));
+  } catch {
+    // Session storage can be unavailable; in-memory state still works.
+  }
+}
+
+function restoreUsbScanState(nodeId) {
+  if (!nodeId || typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const raw = window.localStorage.getItem(usbScanStorageKey(nodeId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      status: parsed.status || "idle",
+      statusText: parsed.statusText || "",
+      error: parsed.error || null,
+      boards: Array.isArray(parsed.boards) ? parsed.boards : null,
+      truncated: parsed.truncated === true,
+      commandId: parsed.commandId || null,
+      lastStatus: parsed.lastStatus || null
+    };
+  } catch {
+    return null;
+  }
+}
+
 function usbScanStateFor(nodeId) {
   const key = String(nodeId || "");
   let state = usbScanStates.get(key);
   if (!state) {
+    const restored = restoreUsbScanState(key);
     state = {
       status: "idle",
       statusText: "",
@@ -64,7 +107,8 @@ function usbScanStateFor(nodeId) {
       running: false,
       importing: false,
       commandId: null,
-      lastStatus: null
+      lastStatus: null,
+      ...(restored || {})
     };
     usbScanStates.set(key, state);
   }
@@ -109,6 +153,57 @@ function assignUsbBoardDisplayIds(boards, devices) {
   return boards;
 }
 
+function usbBoardDetailMarkup(board) {
+  const serialRows = (Array.isArray(board.functions) ? board.functions : [])
+    .flatMap((fn) => (Array.isArray(fn.ports) ? fn.ports : []).map((port) => [
+      esc(fn.name || "—"),
+      `<span class="mono">${esc(port.com || "—")}</span>`,
+      esc(port.role || "—")
+    ]));
+  const audioRows = (Array.isArray(board.audio) ? board.audio : []).map((item) => [
+    esc(item.direction || "—"),
+    esc(item.channels ?? "—"),
+    esc(item.name || "—"),
+    `<span class="mono cell-path">${esc(item.deviceKey || "—")}</span>`
+  ]);
+  return `
+    ${kv([
+      ["板卡名称", esc(board.label || "未命名板卡")],
+      ["设备 ID", `<span class="mono">${esc(board.display_id || "—")}</span>`],
+      ["容器 ID", `<span class="mono cell-path">${esc(board.container_id || "—")}</span>`],
+      ["VID / PID", `<span class="mono">${esc(board.vid || "—")} / ${esc(board.pid || "—")}</span>`],
+      ["序列号", `<span class="mono">${esc(board.serial || "—")}</span>`],
+      ["串口 / 音频", `${esc(usbBoardSerialCount(board))} / ${esc(usbBoardAudioCount(board))}`]
+    ])}
+    ${serialRows.length
+      ? table({ head: ["功能", "端口", "角色"], rows: serialRows })
+      : `<p class="muted small">该板卡没有串口端点。</p>`}
+    ${audioRows.length
+      ? table({ head: ["方向", "声道", "端点", "设备键"], rows: audioRows })
+      : `<p class="muted small">该板卡没有音频端点。</p>`}
+  `;
+}
+
+function usbBoardDetailDialog(slug, backendId) {
+  return `
+    <dialog class="task-delete-dialog usb-board-detail-dialog" id="usb-board-detail-${esc(slug)}" data-usb-board-detail-dialog data-node-backend-id="${esc(backendId)}" role="dialog" aria-modal="true" aria-labelledby="usb-board-detail-title-${esc(slug)}">
+      <div class="task-dialog-card">
+        <div class="task-dialog-head">
+          <div>
+            <h2 class="task-dialog-title" id="usb-board-detail-title-${esc(slug)}" data-usb-board-detail-title>板卡详情</h2>
+            <p class="caption">确认板卡身份、串口与音频端点后再导入。</p>
+          </div>
+          <button class="icon-button" type="button" data-usb-board-detail-close aria-label="关闭">${icon("close")}</button>
+        </div>
+        <div class="usb-board-detail-body" data-usb-board-detail-body></div>
+        <div class="row task-dialog-actions">
+          <button class="btn" type="button" data-usb-board-detail-close>关闭</button>
+        </div>
+      </div>
+    </dialog>
+  `;
+}
+
 function usbBoardMarkup(board, index) {
   const serialCount = usbBoardSerialCount(board);
   const audioCount = usbBoardAudioCount(board);
@@ -120,7 +215,7 @@ function usbBoardMarkup(board, index) {
   return `
     <li class="usb-board${imported ? " is-imported" : ""}" data-usb-board data-usb-board-index="${index}">
       <div class="usb-board-line">
-        <div class="usb-board-main">
+        <div class="usb-board-main" data-usb-board-open data-usb-board-index="${index}" role="button" tabindex="0" title="查看板卡详情">
           <span class="usb-board-label">${esc(board.label || "未命名板卡")}</span>
           <span class="usb-board-meta">${esc(serialText)} · 音频 ${audioCount}</span>
           <span class="usb-board-id mono">${esc(board.display_id || "—")}</span>
@@ -604,6 +699,7 @@ function nodeManageDialog(node, view, apiMode) {
         ${nodeDeviceCreateForm(node, apiMode, slug)}
       </div>
     </dialog>
+    ${usbBoardDetailDialog(slug, backendId)}
   `;
 }
 
@@ -1319,6 +1415,7 @@ export function hydrate({ route, host, mode, refresh } = {}) {
       scanButton.disabled = !apiMode || state.running;
       scanButton.textContent = state.running ? "扫描中…" : (boards.length ? "重新扫描" : "扫描 USB");
     }
+    persistUsbScanState(nodeId, state);
   }
 
   function usbScanErrorMessage(result) {
@@ -1352,7 +1449,6 @@ export function hydrate({ route, host, mode, refresh } = {}) {
 
     state.running = true;
     state.error = null;
-    state.boards = null;
     state.truncated = false;
     state.commandId = null;
     state.lastStatus = null;
@@ -1400,6 +1496,7 @@ export function hydrate({ route, host, mode, refresh } = {}) {
         if (data.status === "SUCCEEDED") {
           const boards = parseUsbTree(data.stdout);
           if (!boards.length) {
+            state.boards = [];
             state.statusText = "";
             state.error = "扫描已完成，但输出中没有可识别的 USB 板卡。";
           } else {
@@ -1466,6 +1563,23 @@ export function hydrate({ route, host, mode, refresh } = {}) {
     pendingUsbDialogReopen = nodeId;
     if (typeof refresh === "function") refresh();
     else renderUsbDialog(dialog);
+  }
+
+  function openUsbBoardDetail(trigger) {
+    const manage = trigger.closest("[data-node-manage-dialog]");
+    const nodeId = manage ? manage.getAttribute("data-node-backend-id") || "" : "";
+    const state = usbScanStateFor(nodeId);
+    const index = Number.parseInt(trigger.getAttribute("data-usb-board-index") || "", 10);
+    const board = Number.isFinite(index) && Array.isArray(state.boards) ? state.boards[index] : null;
+    if (!board) return;
+    const detail = Array.from(document.querySelectorAll("[data-usb-board-detail-dialog]"))
+      .find((item) => item.getAttribute("data-node-backend-id") === nodeId);
+    if (!detail) return;
+    const title = detail.querySelector("[data-usb-board-detail-title]");
+    const body = detail.querySelector("[data-usb-board-detail-body]");
+    if (title) title.textContent = board.label || "板卡详情";
+    if (body) body.innerHTML = usbBoardDetailMarkup(board);
+    openDialog(detail, detail.querySelector("[data-usb-board-detail-close]"));
   }
 
   function openManageDialog(trigger) {
@@ -1703,6 +1817,12 @@ export function hydrate({ route, host, mode, refresh } = {}) {
       void importUsbBoard(usbImport);
       return;
     }
+    const usbBoardOpen = event.target.closest("[data-usb-board-open]");
+    if (usbBoardOpen) {
+      event.preventDefault();
+      openUsbBoardDetail(usbBoardOpen);
+      return;
+    }
     const editOpen = event.target.closest("[data-device-edit-open]");
     if (editOpen) {
       event.preventDefault();
@@ -1814,6 +1934,12 @@ export function hydrate({ route, host, mode, refresh } = {}) {
   // Escape inside an inline edit form collapses that form instead of closing
   // the whole node dialog; focus returns to the row's edit button.
   host.addEventListener("keydown", (event) => {
+    const boardOpen = event.target instanceof Element ? event.target.closest("[data-usb-board-open]") : null;
+    if (boardOpen && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      openUsbBoardDetail(boardOpen);
+      return;
+    }
     if (event.key !== "Escape") return;
     const target = event.target instanceof Element ? event.target : null;
     const form = target ? target.closest("[data-device-edit-form]") : null;
@@ -1833,6 +1959,7 @@ export function hydrate({ route, host, mode, refresh } = {}) {
     }, { signal: controller.signal });
   }
   manageDialogs.forEach((dialog) => bindClosers(dialog, "[data-node-manage-close]"));
+  document.querySelectorAll("[data-usb-board-detail-dialog]").forEach((dialog) => bindClosers(dialog, "[data-usb-board-detail-close]"));
   bindClosers(deleteDialogEl, "[data-topology-delete-cancel]");
 
   if (nodeForm) nodeForm.addEventListener("submit", submitNode, { signal: controller.signal });

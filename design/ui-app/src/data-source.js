@@ -10,6 +10,7 @@ import {
   apiGet,
   apiPatch,
   apiPost,
+  apiStream,
   endpointForRoute,
   isApiMode,
   sessionMessagesEndpoint,
@@ -512,6 +513,83 @@ export async function sendTaskSessionMessage(taskId, value) {
   };
 }
 
+// Consume the task-session SSE stream.  Each `data:` frame is either one event
+// object or a batch array (the control plane batches every 80ms).  The caller
+// owns the AbortController and receives every event through `onEvent`.
+export async function streamTaskSessionEvents(taskId, { signal, onEvent } = {}) {
+  const id = String(taskId || "").trim();
+  if (!id) {
+    return {
+      ok: false,
+      status: 0,
+      error: { code: "MISSING_TASK_ID", message: "Task id is required", retryable: false }
+    };
+  }
+  const endpoint = `/tasks/${encodeURIComponent(id)}/session/stream`;
+  const result = await apiStream(endpoint, { signal });
+  if (!result.ok) return { ...result, endpoint };
+  if (!result.body) {
+    return {
+      ok: false,
+      status: result.status,
+      endpoint,
+      error: { code: "STREAM_UNAVAILABLE", message: "Stream body is unavailable", retryable: true }
+    };
+  }
+
+  const reader = result.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const emit = (payload) => {
+    if (!onEvent) return;
+    if (Array.isArray(payload)) payload.forEach((event) => onEvent(event));
+    else onEvent(payload);
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let boundary = buffer.indexOf("\n\n");
+      while (boundary >= 0) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const data = frame
+          .split(/\r?\n/)
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trim())
+          .join("\n");
+        if (data) {
+          try {
+            emit(JSON.parse(data));
+          } catch {
+            // Ignore malformed frames; the next snapshot poll remains authoritative.
+          }
+        }
+        boundary = buffer.indexOf("\n\n");
+      }
+    }
+    return { ok: true, status: result.status, endpoint };
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      return { ok: true, status: result.status, endpoint, aborted: true };
+    }
+    return {
+      ok: false,
+      status: 0,
+      endpoint,
+      error: {
+        code: "STREAM_INTERRUPTED",
+        message: error && error.message ? error.message : "Stream interrupted",
+        retryable: true
+      }
+    };
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 // Fixture-only conversation. Clearly demo-labeled and never sent to a server.
 export function demoSessionMessages() {
   return {
@@ -982,10 +1060,25 @@ export function normalizeCampaign(source = {}) {
     rounds
   );
   const command = objectValue(raw.command) || null;
+  const node = objectValue(raw.node) || {};
+  const devices = Array.isArray(raw.devices)
+    ? raw.devices.filter((device) => device && typeof device === "object")
+    : [];
+  const nodeDevices = Array.isArray(raw.node_devices)
+    ? raw.node_devices.filter((device) => device && typeof device === "object")
+    : [];
   const campaign = {
     id: String(raw.campaign_id ?? raw.id ?? ""),
     campaign_id: String(raw.campaign_id ?? raw.id ?? ""),
     node_id: raw.node_id ? String(raw.node_id) : null,
+    node: {
+      node_id: node.node_id ? String(node.node_id) : (raw.node_id ? String(raw.node_id) : null),
+      display_id: node.display_id ? String(node.display_id) : null,
+      hostname: node.hostname ? String(node.hostname) : null,
+      communication_state: node.communication_state ? String(node.communication_state) : null
+    },
+    devices,
+    node_devices: nodeDevices,
     // Legacy campaigns were created before the owning-Task link existed and
     // stay unassociated (null); only an exact task_id match attaches a
     // campaign to a task detail page.
