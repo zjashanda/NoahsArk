@@ -170,10 +170,15 @@ assert(tasksPage.includes("结果与日志") && tasksPage.includes('data-artifac
 assert(tasksPage.includes("function hydrateArtifacts(") && tasksPage.includes("loadTestCampaignArtifact(campaignId, name)"), "artifact actions fetch through the authenticated API client");
 assert(tasksPage.includes("data-chat-root") && tasksPage.includes("data-chat-history") && tasksPage.includes("data-chat-form"), "task detail renders the conversation history and persistent composer");
 assert(tasksPage.includes("SESSION_BUSY"), "task conversation handles SESSION_BUSY follow-up errors");
-assert(tasksPage.includes('setStatus("发送中…", false)'), "follow-up shows a simple sending status");
+assert(tasksPage.includes("data-chat-run-status") && tasksPage.includes("chat-run-dots") && tasksPage.includes("function updateRunPill("), "task conversation renders a live in-thread run status pill");
+assert(tasksPage.includes("Agent 正在处理…") && tasksPage.includes("模型正在回复…"), "run status distinguishes waiting, handling and replying phases");
+assert(tasksPage.includes("if (send) send.disabled = readOnly || locked"), "composer keeps the draft editable while the agent is running");
+assert(tasksPage.includes("Agent 执行中，完成后可继续发送。"), "running state explains why submit is temporarily blocked");
+assert(tasksPage.includes('setStatus("已接受，等待 Agent 回复…"') && tasksPage.includes("if (result.accepted && !result.message)"), "202 accepted keeps polling until a real assistant reply");
 assert(!tasksPage.includes("模型返回前每 1.5 秒"), "follow-up does not expose polling internals in the status");
-assert(/if \(input\) input\.value = "";[\s\S]*await sendTaskSessionMessage/.test(tasksPage), "composer clears the draft before the blocking send resolves");
+assert(/if \(input\) input\.value = "";[\s\S]*await sendTaskSessionMessage/.test(tasksPage), "composer clears the draft before the async accept resolves");
 assert(/if \(input && !input\.value\) \{[\s\S]*input\.value = text;/.test(tasksPage), "failed follow-up restores the draft for retry");
+assert(dataSource.includes("accepted: data.accepted === true") && dataSource.includes("session_status"), "follow-up accepts 202 async prompts and keeps provider status");
 assert(tasksPage.includes("TK-02") && !tasksPage.includes("TK-10"), "task conversation is the detail view, with no separate Session tab");
 assert(!tasksPage.includes("其他任务投影"), "task detail stays conversation-first without projection tabs");
 assert(tasksPage.includes("测试活动") && tasksPage.includes("panel=campaigns"), "Tasks area exposes a visible Test campaigns tab");
@@ -209,6 +214,8 @@ assert(!/xterm|node-pty|\bPTY\b/i.test(tasksPage), "task detail embeds no termin
 const componentsCss = read("styles/components.css");
 assert(componentsCss.includes(".trace-panel") && componentsCss.includes(".trace-event") && componentsCss.includes(".trace-filter"), "timeline styles use the shared component layer");
 assert(componentsCss.includes(".trace-panel:not([open]) > .trace-panel-body"), "timeline content is explicitly hidden when collapsed");
+assert(componentsCss.includes(".chat-run-status") && componentsCss.includes("chat-run-bounce"), "running indicator has a dedicated animated status style");
+assert(componentsCss.includes("prefers-reduced-motion: reduce"), "running indicator respects reduced motion");
 assert(componentsCss.includes("height: 168px"), "campaign and task cards keep the 168px height after the trace addition");
 assert(read("styles/components.css").includes(".task-card-type") && read("styles/components.css").includes("height: 168px"), "campaign and task cards share the 168px card height");
 assert(semantics.includes("export function campaignOutcome") && semantics.includes("RECOGNIZED"), "campaign outcome derivation lives in the pure semantics module");

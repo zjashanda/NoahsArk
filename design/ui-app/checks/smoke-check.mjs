@@ -444,6 +444,7 @@ check(readyHtml.includes('class="badge tone-success">COMPLETED'), "COMPLETED sup
 check(readyHtml.includes("PONG"), "task conversation renders result.summary and the assistant reply");
 check(readyHtml.includes("Reply with the single word PONG and nothing else."), "task conversation renders the user prompt");
 check(readyHtml.includes("data-chat-form") && readyHtml.includes("data-chat-input"), "task conversation has a persistent composer");
+check(readyHtml.includes("data-chat-run-status") && readyHtml.includes("chat-run-dots"), "task conversation mounts an in-thread running indicator");
 check(readyHtml.includes("data-inspector") && readyHtml.includes("data-inspector-toggle"), "task detail mounts the collapsible Inspector");
 check(readyHtml.includes("Supervisor ID") && readyHtml.includes("消息数") && readyHtml.includes("模型"), "Inspector exposes supervisor id, message count and model");
 check(readyHtml.includes("data-delete-task"), "task detail header exposes delete");

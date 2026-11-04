@@ -992,6 +992,11 @@ function chatPanel(view, task, supervisor, session, demo) {
       <div class="chat-history" data-chat-history role="log" aria-live="polite" aria-relevant="additions" aria-label="任务会话内容">
         ${messagesHtml(messages, emptyNoteFor(session))}
       </div>
+      <div class="chat-run-status" data-chat-run-status hidden aria-live="polite">
+        <span class="chat-run-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="chat-run-label" data-chat-run-label></span>
+        <span class="chat-run-elapsed mono" data-chat-run-elapsed></span>
+      </div>
       ${composerMarkup(supervisor, session, demo)}
     </section>
   `;
@@ -2124,6 +2129,9 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
   const runLabelEl = root.querySelector("[data-agent-status-label]");
   const runElapsedEl = root.querySelector("[data-agent-elapsed]");
   const runActivityEl = root.querySelector("[data-agent-activity]");
+  const runPill = root.querySelector("[data-chat-run-status]");
+  const runPillLabel = root.querySelector("[data-chat-run-label]");
+  const runPillElapsed = root.querySelector("[data-chat-run-elapsed]");
   const refreshButton = root.querySelector('[data-action="refresh-chat"]');
   const inspectorLayout = root.closest("[data-inspector-layout]");
   const inspectorToggle = root.querySelector("[data-inspector-toggle]");
@@ -2185,8 +2193,27 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
     renderInspector();
   }
 
+  function providerBusy() {
+    const state = String(
+      (session && session.session_status && session.session_status.state) || ""
+    ).toLowerCase();
+    return state === "busy" || state === "retry";
+  }
+
+  function runAnchor() {
+    if (followupStartedAt) return followupStartedAt;
+    const messages = (session && session.messages) || [];
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (!message || message.role !== "user" || !message.created_at) continue;
+      const parsed = Date.parse(message.created_at);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return 0;
+  }
+
   function activeFollowup() {
-    return busy || followupWatching;
+    return busy || followupWatching || providerBusy();
   }
 
   function followupReplySeen() {
@@ -2220,7 +2247,43 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
     }, 120000);
   }
 
+  function runPillPhase() {
+    if (!busy && !followupWatching && providerBusy()) {
+      const status = (session && session.session_status) || {};
+      if (String(status.state || "").toLowerCase() === "retry") {
+        return status.retry_attempt ? `模型重试中（第 ${status.retry_attempt} 次）…` : "模型重试中…";
+      }
+      return "Agent 正在执行…";
+    }
+    const messages = ((session && session.messages) || []).slice(followupBaseline);
+    const hasAssistant = messages.some(
+      (message) => message && message.role === "assistant" && String(message.text || "").trim()
+    );
+    const hasUser = messages.some(
+      (message) => message && message.role === "user" && String(message.text || "").trim()
+    );
+    if (hasAssistant) return "模型正在回复…";
+    if (hasUser) return "Agent 正在处理…";
+    const anchor = runAnchor();
+    if (anchor && Date.now() - anchor > 3000) return "Agent 正在处理…";
+    return "已发送，等待 Agent 接手…";
+  }
+
+  function updateRunPill() {
+    if (!runPill) return;
+    const active = activeFollowup();
+    runPill.hidden = !active;
+    if (!active) return;
+    if (runPillLabel) runPillLabel.textContent = runPillPhase();
+    if (runPillElapsed) {
+      const anchor = runAnchor();
+      const elapsed = anchor ? Date.now() - anchor : 0;
+      runPillElapsed.textContent = `· ${runDurationLabel(elapsed)}`;
+    }
+  }
+
   function updateAgentStatus() {
+    updateRunPill();
     if (!runStatusEl) return;
     const following = activeFollowup();
     const visual = following ? { level: "running", label: "执行中" } : runStatusVisual(supervisor);
@@ -2317,16 +2380,18 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
   function syncComposer() {
     const unavailable = Boolean(session && session.status === "error");
     const locked = activeFollowup();
-    const disabled = demo || !bound() || locked || unavailable;
-    if (input) input.disabled = disabled;
-    if (send) send.disabled = disabled;
-    if (demo || locked) return;
+    const readOnly = demo || !bound() || unavailable;
+    if (input) input.disabled = readOnly;
+    if (send) send.disabled = readOnly || locked;
+    if (demo) return;
     if (unavailable) {
       setStatus("会话内容不可用；任务结果和测试活动仍可查看。", true);
       return;
     }
     if (!bound()) {
       setStatus(unboundNote, false);
+    } else if (locked) {
+      setStatus("Agent 执行中，完成后可继续发送。", false);
     } else if (statusEl && statusEl.textContent === unboundNote) {
       setStatus(readyNote, false);
     }
@@ -2410,7 +2475,12 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
   }
 
   async function submit() {
-    if (busy || followupWatching || demo) return;
+    if (demo) return;
+    if (busy || followupWatching || providerBusy()) {
+      setStatus("Agent 执行中，完成后可继续发送。", false);
+      if (input) input.focus();
+      return;
+    }
     const text = input ? input.value.trim() : "";
     if (!text) {
       setStatus("请输入内容后再发送。", true);
@@ -2500,6 +2570,17 @@ function hydrateChat({ root, taskId, mode, initialSupervisor, initialSession, re
     if (input) {
       input.value = "";
       input.focus();
+    }
+    if (result.accepted && !result.message) {
+      // 202: the server accepted the prompt but the model is still running.
+      // Keep the run pill and poll the transcript for the eventual reply.
+      busy = false;
+      watchForFollowupReply();
+      setStatus("已接受，等待 Agent 回复…", false);
+      updateAgentStatus();
+      syncComposer();
+      await tick();
+      return;
     }
     signature = "";
     await tick();

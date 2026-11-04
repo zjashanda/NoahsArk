@@ -395,11 +395,13 @@ export function normalizeSessionMessages(data) {
   const messages = Array.isArray(source.messages)
     ? source.messages.map(projectSessionMessage).filter(Boolean)
     : [];
+  const providerStatus = objectValue(source.session_status) || { state: "unknown" };
   return {
     status: "ready",
     task_id: textOrNull(source.task_id),
     state: textOrNull(source.state) || "UNKNOWN",
     state_is_terminal: source.state_is_terminal === true,
+    session_status: providerStatus,
     message_count: messages.length,
     truncated: source.truncated === true,
     messages
@@ -468,10 +470,10 @@ export async function sendTaskSessionMessage(taskId, value) {
     };
   }
 
-  // Follow-up turns are blocking: the model may need minutes.  The shared
-  // apiFetch default (4s) would abort the turn and leave an empty assistant
-  // message behind, so give this call a long budget.
-  const result = await apiPost(endpoint, { text: clean }, { timeout: 180000 });
+  // The control plane accepts the prompt asynchronously (202) and the model
+  // continues in the background.  Keep a generous budget for the accept call
+  // itself; completion is observed through session message polling.
+  const result = await apiPost(endpoint, { text: clean }, { timeout: 30000 });
   if (!result.ok) {
     return {
       ok: false,
@@ -495,13 +497,18 @@ export async function sendTaskSessionMessage(taskId, value) {
   return {
     ok: true,
     status: result.status,
-    message: {
-      message_id: textOrNull(data.message_id),
-      role: textOrNull(data.role) || "assistant",
-      created_at: textOrNull(data.created_at),
-      text: String(data.text || ""),
-      error_code: null
-    }
+    accepted: data.accepted === true,
+    prompt_digest: textOrNull(data.prompt_digest),
+    session_status: objectValue(data.session_status) || { state: "unknown" },
+    message: data.text
+      ? {
+          message_id: textOrNull(data.message_id),
+          role: textOrNull(data.role) || "assistant",
+          created_at: textOrNull(data.created_at),
+          text: String(data.text || ""),
+          error_code: null
+        }
+      : null
   };
 }
 
