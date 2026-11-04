@@ -16,6 +16,8 @@ attempt per method call and never converts ``204`` into a completion claim.
 
 from __future__ import annotations
 
+import json
+from collections.abc import AsyncIterator
 from types import TracebackType
 from typing import Self
 from urllib.parse import quote
@@ -327,6 +329,48 @@ class OpenCodeHTTPProvider:
             # the session is not busy/retrying, i.e. idle.
             return SessionStatus(state=SessionState.IDLE)
         return status_from_wire(status_wire)
+
+    async def stream_events(self, session_id: str) -> AsyncIterator[dict[str, object]]:
+        """Relay the provider-wide SSE stream, filtered to one session.
+
+        OpenCode emits ``message.part.delta`` events with incremental text.  The
+        control plane uses those events only as a read-only process view; the
+        persisted transcript remains the authority.
+        """
+
+        _session_path(session_id)
+        path = "event"
+        try:
+            async with self._client.stream(
+                "GET",
+                path,
+                headers={"accept": "text/event-stream"},
+                timeout=None,
+            ) as response:
+                _ensure_success(response, path=path)
+                async for line in response.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    raw = line[5:].strip()
+                    if not raw:
+                        continue
+                    try:
+                        payload = json.loads(raw)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(payload, dict):
+                        continue
+                    properties = payload.get("properties")
+                    if (
+                        isinstance(properties, dict)
+                        and properties.get("sessionID") == session_id
+                    ):
+                        yield payload
+        except httpx.TransportError as exc:
+            raise OpenCodeTransportError(
+                "OpenCode event stream failed before a response was received",
+                details={"path": path},
+            ) from exc
 
     async def session_messages(self, session_id: str) -> SessionMessages:
         path = _session_path(session_id, "/message")

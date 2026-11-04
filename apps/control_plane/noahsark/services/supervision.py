@@ -12,7 +12,9 @@ exposed.
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -25,7 +27,12 @@ from ..integrations.opencode.errors import (
     OpenCodeError,
     OpenCodeNotFoundError,
 )
-from ..integrations.opencode.protocol import BoundedPrompt, MessageView, OpenCodeProvider, SessionStatus
+from ..integrations.opencode.protocol import (
+    BoundedPrompt,
+    MessageView,
+    OpenCodeProvider,
+    SessionStatus,
+)
 from ..integrations.opencode.sanitizer import sanitize_text
 from ..models import (
     Agent,
@@ -528,12 +535,15 @@ def _project_session_messages(
     character budget was exhausted.
     """
 
-    selected = messages[:max_messages]
+    # Keep the newest window, not the oldest.  A long-running supervisor
+    # session can exceed the cap; dropping the newest messages would hide the
+    # reply the user is currently waiting for.
+    selected = messages[-max_messages:]
     truncated = len(messages) > max_messages
     remaining = max_chars
-    projected: list[dict[str, Any]] = []
+    newest_first: list[dict[str, Any]] = []
 
-    for message in selected:
+    for message in reversed(selected):
         if remaining <= 0:
             truncated = True
             break
@@ -559,8 +569,9 @@ def _project_session_messages(
             entry["error_code"] = sanitize_text(
                 message.error_name, max_chars=120
             ).text
-        projected.append(entry)
+        newest_first.append(entry)
 
+    projected = list(reversed(newest_first))
     return projected, truncated
 
 
@@ -676,6 +687,93 @@ def _clean_session_message_text(text: str) -> str:
             },
         )
     return clean
+
+
+def _process_text(value: object, *, max_chars: int = 4000) -> str | None:
+    if value is None:
+        return None
+    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+    if not text.strip():
+        return None
+    return sanitize_text(text, max_chars=max_chars).text
+
+
+def _sanitize_process_event(event: dict[str, object]) -> dict[str, object] | None:
+    """Reduce one OpenCode SSE event to the small, safe process projection."""
+
+    event_type = str(event.get("type") or "")
+    properties = event.get("properties")
+    if not isinstance(properties, dict):
+        properties = {}
+    if event_type == "message.part.delta":
+        return {
+            "type": event_type,
+            "messageID": properties.get("messageID"),
+            "partID": properties.get("partID"),
+            "field": properties.get("field"),
+            "delta": _process_text(properties.get("delta")),
+        }
+    if event_type == "message.part.updated":
+        part = properties.get("part")
+        if not isinstance(part, dict):
+            return None
+        state = part.get("state")
+        if not isinstance(state, dict):
+            state = {}
+        return {
+            "type": event_type,
+            "messageID": properties.get("messageID") or part.get("messageID"),
+            "part": {
+                "id": part.get("id"),
+                "messageID": part.get("messageID"),
+                "type": part.get("type"),
+                "text": _process_text(part.get("text")),
+                "tool": _process_text(part.get("tool"), max_chars=200),
+                "status": _process_text(state.get("status"), max_chars=200),
+                "input": _process_text(state.get("input")),
+                "output": _process_text(state.get("output")),
+            },
+        }
+    if event_type == "message.updated":
+        info = properties.get("info")
+        if not isinstance(info, dict):
+            return None
+        return {
+            "type": event_type,
+            "messageID": info.get("id"),
+            "role": info.get("role"),
+        }
+    if event_type == "session.status":
+        status = properties.get("status")
+        if not isinstance(status, dict):
+            return None
+        return {"type": event_type, "status": status.get("type")}
+    return None
+
+
+async def stream_task_session_events(
+    session: AsyncSession,
+    identifier: str,
+    provider: OpenCodeProvider,
+) -> AsyncIterator[dict[str, object]]:
+    """Relay the bound session's process events as sanitized dictionaries."""
+
+    task = await _resolve_task(session, identifier)
+    row = await _load_supervisor_row(session, task)
+    if row is None:
+        raise not_found("supervisor_session", identifier)
+    if not row.remote_session_id:
+        raise ApiError(
+            409,
+            "SESSION_NOT_BOUND",
+            "Task has no bound OpenCode session",
+            retryable=False,
+            details={"task_id": task.display_id},
+        )
+    async for event in provider.stream_events(row.remote_session_id):
+        safe = _sanitize_process_event(event)
+        if safe is not None:
+            yield safe
 
 
 async def send_task_session_message(

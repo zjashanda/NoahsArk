@@ -14,6 +14,7 @@ receipt therefore carries ``completion_claimed=False``.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
@@ -216,6 +217,11 @@ class OpenCodeProvider(Protocol):
     ) -> SessionTurn: ...
 
     async def session_status(self, session_id: str) -> SessionStatus: ...
+
+    def stream_events(self, session_id: str) -> AsyncIterator[dict[str, object]]:
+        """Yield raw OpenCode events whose properties.sessionID matches."""
+
+        ...
 
     async def session_messages(self, session_id: str) -> SessionMessages: ...
 

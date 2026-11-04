@@ -35,6 +35,8 @@ from starlette.concurrency import run_in_threadpool
 from ..db import get_session
 from ..errors import ApiError
 from ..models.command import NodeCommand
+from ..models.device import Device, Node
+from ..models.task import Task
 from ..models.test_campaign import CAMPAIGN_STATUSES, TestCampaign
 from ..services import artifact_storage, campaign_artifacts, test_campaigns
 from ..services.auth import Principal
@@ -74,11 +76,71 @@ def _campaign_projection(
     campaign: TestCampaign,
     command: NodeCommand | None,
     artifacts: dict[str, object] | None = None,
+    node: Node | None = None,
+    task_context: dict[str, object] | None = None,
+    node_devices: list[Device] | None = None,
 ) -> dict[str, object]:
-    view = test_campaigns.campaign_view(campaign, command, artifacts)
+    view = test_campaigns.campaign_view(
+        campaign,
+        command,
+        artifacts,
+        node=node,
+        task_context=task_context,
+    )
+    view["node_devices"] = [
+        {
+            "device_id": str(device.device_id),
+            "display_id": device.display_id,
+            "communication_state": device.communication_state,
+            "capabilities": list(device.capabilities or []),
+        }
+        for device in (node_devices or [])
+    ]
     for key in ("created_at", "started_at", "finished_at"):
         view[key] = _iso(view[key])  # type: ignore[arg-type]
     return view
+
+
+async def _nodes_for(
+    session: AsyncSession, campaigns: list[TestCampaign]
+) -> dict[object, Node]:
+    node_ids = {campaign.node_id for campaign in campaigns if campaign.node_id}
+    if not node_ids:
+        return {}
+    result = await session.execute(select(Node).where(Node.node_id.in_(node_ids)))
+    return {node.node_id: node for node in result.scalars()}
+
+
+async def _task_contexts_for(
+    session: AsyncSession, campaigns: list[TestCampaign]
+) -> dict[object, dict[str, object]]:
+    task_ids = {campaign.task_id for campaign in campaigns if campaign.task_id}
+    if not task_ids:
+        return {}
+    result = await session.execute(
+        select(Task.task_id, Task.execution_context).where(Task.task_id.in_(task_ids))
+    )
+    return {
+        task_id: dict(execution_context or {})
+        for task_id, execution_context in result.all()
+    }
+
+
+async def _node_devices_for(
+    session: AsyncSession, campaigns: list[TestCampaign]
+) -> dict[object, list[Device]]:
+    node_ids = {campaign.node_id for campaign in campaigns if campaign.node_id}
+    if not node_ids:
+        return {}
+    result = await session.execute(
+        select(Device)
+        .where(Device.node_id.in_(node_ids))
+        .order_by(Device.display_id)
+    )
+    grouped: dict[object, list[Device]] = {}
+    for device in result.scalars():
+        grouped.setdefault(device.node_id, []).append(device)
+    return grouped
 
 
 async def _artifact_collection(
@@ -228,6 +290,9 @@ async def list_campaigns(
         .all()
     )
     commands = await _commands_for(session, campaigns)
+    nodes = await _nodes_for(session, campaigns)
+    task_contexts = await _task_contexts_for(session, campaigns)
+    node_devices = await _node_devices_for(session, campaigns)
     artifacts = await campaign_artifacts.list_artifacts(
         session, [campaign.campaign_id for campaign in campaigns]
     )
@@ -242,6 +307,9 @@ async def list_campaigns(
                         artifacts.get(campaign.campaign_id, []),
                         campaign.campaign_id,
                     ),
+                    nodes.get(campaign.node_id),
+                    task_contexts.get(campaign.task_id),
+                    node_devices.get(campaign.node_id),
                 )
                 for campaign in campaigns
             ],
@@ -261,7 +329,20 @@ async def get_campaign(
 ) -> dict:
     campaign, command = await test_campaigns.get_campaign(session, campaign_id)
     artifacts = await _artifact_collection(session, campaign.campaign_id)
-    return success(request, _campaign_projection(campaign, command, artifacts))
+    nodes = await _nodes_for(session, [campaign])
+    task_contexts = await _task_contexts_for(session, [campaign])
+    node_devices = await _node_devices_for(session, [campaign])
+    return success(
+        request,
+        _campaign_projection(
+            campaign,
+            command,
+            artifacts,
+            nodes.get(campaign.node_id),
+            task_contexts.get(campaign.task_id),
+            node_devices.get(campaign.node_id),
+        ),
+    )
 
 
 @router.post("/test-campaigns/{campaign_id}/artifacts", status_code=201)
@@ -369,7 +450,17 @@ async def stop_campaign(
         path=request.url.path,
     )
     artifacts = await _artifact_collection(session, campaign.campaign_id)
-    projection = _campaign_projection(campaign, command, artifacts)
+    nodes = await _nodes_for(session, [campaign])
+    task_contexts = await _task_contexts_for(session, [campaign])
+    node_devices = await _node_devices_for(session, [campaign])
+    projection = _campaign_projection(
+        campaign,
+        command,
+        artifacts,
+        nodes.get(campaign.node_id),
+        task_contexts.get(campaign.task_id),
+        node_devices.get(campaign.node_id),
+    )
     projection["runner_active"] = runner_active
     return success(request, projection)
 

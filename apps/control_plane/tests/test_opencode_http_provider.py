@@ -9,7 +9,6 @@ from collections.abc import Callable
 
 import httpx
 import pytest
-
 from noahsark.integrations.opencode.errors import (
     OpenCodeConfigError,
     OpenCodeHTTPError,
@@ -593,3 +592,28 @@ def test_delete_session_uses_delete_endpoint_and_treats_404_as_success() -> None
         ("DELETE", "/session/oc-gone"),
         ("DELETE", "/session/oc-error"),
     ]
+
+
+def test_stream_events_parses_sse_and_filters_session() -> None:
+    frames = [
+        {"type": "message.part.delta", "properties": {"sessionID": "oc-s1", "delta": "Hel"}},
+        {"type": "message.part.delta", "properties": {"sessionID": "other", "delta": "no"}},
+        {"type": "session.status", "properties": {"sessionID": "oc-s1", "status": {"type": "busy"}}},
+    ]
+    body = "".join(f"data: {json.dumps(frame)}\n\n" for frame in frames).encode()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert (request.method, request.url.path) == ("GET", "/event")
+        return httpx.Response(200, content=body, headers={"content-type": "text/event-stream"})
+
+    provider = _provider(handler)
+
+    async def scenario() -> list[dict[str, object]]:
+        try:
+            return [event async for event in provider.stream_events("oc-s1")]
+        finally:
+            await provider.aclose()
+
+    events = asyncio.run(scenario())
+    assert [event["type"] for event in events] == ["message.part.delta", "session.status"]
+    assert events[0]["properties"]["delta"] == "Hel"

@@ -7,12 +7,17 @@ collapses them into a single verdict.
 
 from __future__ import annotations
 
+import asyncio
+import json
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
+from ..integrations.opencode.errors import OpenCodeError
 from ..integrations.opencode.protocol import OpenCodeProvider
 from ..services import read_models, supervision
 from .deps import get_opencode_provider, get_principal
@@ -64,6 +69,79 @@ async def get_task_session_messages(
     return success(
         request,
         await supervision.get_task_session_messages(session, task_id, provider),
+    )
+
+
+@router.get("/tasks/{task_id}/session/stream")
+async def stream_task_session_events(
+    task_id: str,
+    session: Session,
+    provider: Provider,
+) -> StreamingResponse:
+    """Relay sanitized OpenCode process events as SSE.
+
+    Events are merged into ~80ms batches so a token-level model stream becomes
+    one compact SSE frame instead of one HTTP broadcast per token.  The 1.5s
+    message poll remains the authoritative fallback if this stream drops.
+    """
+
+    async def generate():
+        queue: asyncio.Queue[dict[str, object] | None] = asyncio.Queue()
+
+        async def produce() -> None:
+            try:
+                async for event in supervision.stream_task_session_events(
+                    session, task_id, provider
+                ):
+                    await queue.put(event)
+            except OpenCodeError as exc:
+                await queue.put(
+                    {
+                        "type": "stream.error",
+                        "code": exc.code,
+                        "message": exc.message,
+                        "retryable": exc.retryable,
+                    }
+                )
+            finally:
+                await queue.put(None)
+
+        producer = asyncio.create_task(produce())
+        try:
+            while True:
+                first = await queue.get()
+                if first is None:
+                    break
+                batch = [first]
+                deadline = time.monotonic() + 0.08
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    try:
+                        item = await asyncio.wait_for(queue.get(), remaining)
+                    except TimeoutError:
+                        break
+                    if item is None:
+                        yield f"data: {json.dumps(batch, ensure_ascii=False)}\n\n"
+                        return
+                    batch.append(item)
+                yield f"data: {json.dumps(batch, ensure_ascii=False)}\n\n"
+        finally:
+            producer.cancel()
+            try:
+                await producer
+            except asyncio.CancelledError:
+                pass
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

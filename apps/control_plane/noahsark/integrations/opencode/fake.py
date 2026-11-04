@@ -9,7 +9,7 @@ completion.  ``auto_complete=False`` keeps a turn busy until
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field
 
 from .config import ModelSelection
@@ -72,6 +72,7 @@ class FakeOpenCodeProvider:
         self._session_counter = 0
         self._message_counter = 0
         self._sessions: dict[str, _FakeSession] = {}
+        self._events: dict[str, list[dict[str, object]]] = {}
 
     # -- deterministic ids / clock ------------------------------------
     def _tick(self) -> int:
@@ -224,6 +225,18 @@ class FakeOpenCodeProvider:
             session_id=session_id,
             messages=tuple(session.messages),
         )
+
+    async def stream_events(
+        self, session_id: str
+    ) -> AsyncIterator[dict[str, object]]:
+        self._session(session_id)
+        for event in self._events.get(session_id, ()):
+            yield dict(event)
+
+    def push_event(self, session_id: str, event: dict[str, object]) -> None:
+        """Queue one deterministic event for ``stream_events`` in tests."""
+
+        self._events.setdefault(session_id, []).append(dict(event))
 
     async def abort_session(self, session_id: str) -> bool:
         session = self._session(session_id)

@@ -15,7 +15,6 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
-
 from noahsark.api.deps import get_opencode_provider
 from noahsark.db import get_optional_session, get_session
 from noahsark.integrations.opencode.config import ModelSelection

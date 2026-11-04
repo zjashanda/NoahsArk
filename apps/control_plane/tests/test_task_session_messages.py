@@ -11,11 +11,11 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
-
 from noahsark.api.deps import get_opencode_provider
 from noahsark.db import get_optional_session, get_session
 from noahsark.integrations.opencode.errors import (
@@ -63,8 +63,14 @@ class _FakeDb:
 
 
 class _StaticProvider:
-    def __init__(self, messages: SessionMessages) -> None:
+    def __init__(
+        self,
+        messages: SessionMessages,
+        *,
+        events: tuple[dict[str, object], ...] = (),
+    ) -> None:
         self.messages = messages
+        self.events = events
         self.calls = 0
         self.last_session_id: str | None = None
 
@@ -76,6 +82,13 @@ class _StaticProvider:
     async def session_status(self, session_id: str) -> SessionStatus:
         del session_id
         return SessionStatus(state=SessionState.IDLE)
+
+    async def stream_events(
+        self, session_id: str
+    ) -> AsyncIterator[dict[str, object]]:
+        self.last_session_id = session_id
+        for event in self.events:
+            yield event
 
 
 class _FailingProvider:
@@ -317,6 +330,10 @@ def test_more_than_200_messages_is_truncated(api):
     assert data["truncated"] is True
     assert data["message_count"] == 200
     assert len(data["messages"]) == 200
+    # The newest window is retained; dropping the oldest message must never
+    # hide the reply the user is currently waiting for.
+    assert data["messages"][0]["message_id"] == "msg-0001"
+    assert data["messages"][-1]["message_id"] == "msg-0200"
 
 
 def test_more_than_200k_chars_is_truncated(api):
@@ -335,3 +352,45 @@ def test_more_than_200k_chars_is_truncated(api):
         for part in message["parts"]
     )
     assert total <= 200_000
+
+
+def test_session_stream_relays_sanitized_process_events(api):
+    task = _task()
+    provider = _StaticProvider(
+        _plain_messages(2),
+        events=(
+            {
+                "type": "message.part.delta",
+                "properties": {
+                    "sessionID": REMOTE_ID,
+                    "messageID": "msg-live",
+                    "partID": "part-live",
+                    "field": "text",
+                    "delta": "thinking /home/bszheng/private/x",
+                },
+            },
+            {
+                "type": "session.status",
+                "properties": {
+                    "sessionID": REMOTE_ID,
+                    "status": {"type": "busy"},
+                },
+            },
+        ),
+    )
+    client = api(provider, task, _supervisor(task, remote_session_id=REMOTE_ID))
+
+    with client.stream(
+        "GET",
+        f"/api/v1/tasks/{task.display_id}/session/stream",
+        headers=HEADERS,
+    ) as response:
+        body = "".join(response.iter_text())
+
+    assert response.status_code == 200, body
+    assert "text/event-stream" in response.headers["content-type"]
+    assert "message.part.delta" in body
+    assert "[REDACTED_PATH]" in body
+    assert "session.status" in body
+    assert REMOTE_ID not in body
+    assert "/home/bszheng" not in body

@@ -784,6 +784,8 @@ def campaign_view(
     campaign: TestCampaign,
     command: NodeCommand | None,
     artifacts: dict[str, Any] | None = None,
+    node: Any | None = None,
+    task_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Read projection shared with the API layer (summary/rounds already parsed).
 
@@ -803,6 +805,13 @@ def campaign_view(
     return {
         "campaign_id": str(campaign.campaign_id),
         "node_id": str(campaign.node_id),
+        "node": {
+            "node_id": str(campaign.node_id),
+            "display_id": getattr(node, "display_id", None),
+            "hostname": getattr(node, "hostname", None),
+            "communication_state": getattr(node, "communication_state", None),
+        },
+        "devices": list((task_context or {}).get("devices") or []),
         "task_id": str(campaign.task_id) if campaign.task_id is not None else None,
         "scenario": campaign.scenario,
         "rounds": campaign.rounds,
