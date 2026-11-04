@@ -136,8 +136,12 @@ def _supervisor(
     )
 
 
-def _provider(*, text: str = "4") -> tuple[FakeOpenCodeProvider, str]:
-    provider = FakeOpenCodeProvider(turns=(FakeTurn(text=text),), model=MODEL)
+def _provider(
+    *, text: str = "4", auto_complete: bool = True
+) -> tuple[FakeOpenCodeProvider, str]:
+    provider = FakeOpenCodeProvider(
+        turns=(FakeTurn(text=text),), model=MODEL, auto_complete=auto_complete
+    )
     session = asyncio.run(provider.create_session(title="follow-up"))
     return provider, session.session_id
 
@@ -168,10 +172,10 @@ def _headers(key: str = "follow-up-1", role: str = "ADMIN") -> dict[str, str]:
     return headers
 
 
-def test_follow_up_sends_pinned_model_and_returns_assistant_reply(api):
+def test_follow_up_accepts_async_prompt_without_waiting_for_reply(api):
     task = _task()
     row = _supervisor(task)
-    provider, remote = _provider(text="4")
+    provider, remote = _provider(text="4", auto_complete=False)
     row.remote_session_id = remote
     db = _FakeSession(task, row)
     client = api(db, provider)
@@ -182,23 +186,28 @@ def test_follow_up_sends_pinned_model_and_returns_assistant_reply(api):
         headers=_headers(),
     )
 
-    assert response.status_code == 200, response.text
+    assert response.status_code == 202, response.text
     data = response.json()["data"]
     assert data["task_id"] == str(task.task_id)
     assert data["supervisor_session_id"] == str(row.supervisor_session_id)
     assert data["remote_session_id"] == "fake***0001"
     assert data["remote_session_id_masked"] is True
     assert data["state"] == "COMPLETED"
-    assert data["role"] == "assistant"
-    assert data["text"] == "4"
-    assert data["message_id"] == "fake-message-0002"
+    assert data["accepted"] is True
+    assert data["role"] == "user"
+    assert data["text"] is None
+    assert data["message_id"] is None
+    assert data["text_chars"] == len(FOLLOW_UP_TEXT)
+    assert data["prompt_digest"].startswith("sha256:")
+    assert data["provider_http_status"] == 204
     assert data["created_at"].endswith("Z")
+    assert data["session_status"]["state"] == "busy"
     assert data["read_only"] is False
 
-    assert provider.message_calls() == ((remote, FOLLOW_UP_TEXT, None),)
+    assert provider.prompt_calls() == ((remote, FOLLOW_UP_TEXT, None),)
     assert provider.model_calls() == (
         ("create", MODEL),
-        ("message", MODEL),
+        ("prompt", MODEL),
     )
     # A follow-up never advances or reopens the business-task binding.
     assert row.state == "COMPLETED"
@@ -224,7 +233,7 @@ def test_active_execution_states_are_busy_and_never_call_provider(api, state):
     error = response.json()["error"]
     assert error["code"] == "SESSION_BUSY"
     assert error["details"]["state"] == state
-    assert provider.message_calls() == ()
+    assert provider.prompt_calls() == ()
     assert db.commits == 0
 
 
@@ -243,7 +252,7 @@ def test_unbound_session_returns_409_without_calling_provider(api):
 
     assert response.status_code == 409, response.text
     assert response.json()["error"]["code"] == "SESSION_NOT_BOUND"
-    assert provider.message_calls() == ()
+    assert provider.prompt_calls() == ()
     assert db.commits == 0
 
 
@@ -261,7 +270,7 @@ def test_unknown_supervisor_row_returns_404(api):
 
     assert response.status_code == 404, response.text
     assert response.json()["error"]["code"] == "NOT_FOUND"
-    assert provider.message_calls() == ()
+    assert provider.prompt_calls() == ()
 
 
 @pytest.mark.parametrize(
@@ -288,7 +297,7 @@ def test_blank_and_oversized_text_are_rejected(api, text, status_code, code):
 
     assert response.status_code == status_code, response.text
     assert response.json()["error"]["code"] == code
-    assert provider.message_calls() == ()
+    assert provider.prompt_calls() == ()
     assert db.commits == 0
 
 
@@ -311,10 +320,10 @@ def test_idempotent_replay_sends_only_once(api):
         headers=_headers(key="replay-1"),
     )
 
-    assert first.status_code == 200, first.text
-    assert second.status_code == 200, second.text
+    assert first.status_code == 202, first.text
+    assert second.status_code == 202, second.text
     assert first.json()["data"] == second.json()["data"]
-    assert provider.message_calls() == ((remote, FOLLOW_UP_TEXT, None),)
+    assert provider.prompt_calls() == ((remote, FOLLOW_UP_TEXT, None),)
     assert db.commits == 1
 
 
@@ -339,10 +348,10 @@ def test_same_key_with_different_text_is_idempotency_conflict(api):
 
     assert response.status_code == 409, response.text
     assert response.json()["error"]["code"] == "IDEMPOTENCY_CONFLICT"
-    assert provider.message_calls() == ((remote, FOLLOW_UP_TEXT, None),)
+    assert provider.prompt_calls() == ((remote, FOLLOW_UP_TEXT, None),)
 
 
-def test_assistant_reply_is_sanitized_before_return(api):
+def test_async_accept_response_does_not_return_assistant_text(api):
     task = _task()
     row = _supervisor(task)
     provider, remote = _provider(
@@ -358,13 +367,13 @@ def test_assistant_reply_is_sanitized_before_return(api):
         headers=_headers(key="sanitize-1"),
     )
 
-    assert response.status_code == 200, response.text
-    text = response.json()["data"]["text"]
+    assert response.status_code == 202, response.text
+    data = response.json()["data"]
+    assert data["accepted"] is True
+    assert data["text"] is None
     serialized = json.dumps(response.json())
     assert "abcdefghijklmnop" not in serialized
     assert "/home/bszheng" not in serialized
-    assert "[REDACTED_SECRET]" in text
-    assert "[REDACTED_PATH]" in text
 
 
 def test_observer_cannot_send_follow_up(api):
@@ -383,7 +392,7 @@ def test_observer_cannot_send_follow_up(api):
 
     assert response.status_code == 403, response.text
     assert response.json()["error"]["code"] == "FORBIDDEN"
-    assert provider.message_calls() == ()
+    assert provider.prompt_calls() == ()
 
 
 def test_follow_up_requires_idempotency_key(api):
@@ -402,4 +411,4 @@ def test_follow_up_requires_idempotency_key(api):
 
     assert response.status_code == 400, response.text
     assert response.json()["error"]["code"] == "IDEMPOTENCY_REQUIRED"
-    assert provider.message_calls() == ()
+    assert provider.prompt_calls() == ()

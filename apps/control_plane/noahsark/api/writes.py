@@ -248,7 +248,7 @@ async def post_task_session_message(
         scope=scope,
         key=idempotency_key,
         request_hash=writes.request_fingerprint(request.url.path, payload),
-        status_code=200,
+        status_code=202,
         action=lambda: supervision.send_task_session_message(
             session,
             task_id,

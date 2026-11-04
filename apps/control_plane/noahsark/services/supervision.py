@@ -25,7 +25,7 @@ from ..integrations.opencode.errors import (
     OpenCodeError,
     OpenCodeNotFoundError,
 )
-from ..integrations.opencode.protocol import MessageView, OpenCodeProvider
+from ..integrations.opencode.protocol import BoundedPrompt, MessageView, OpenCodeProvider, SessionStatus
 from ..integrations.opencode.sanitizer import sanitize_text
 from ..models import (
     Agent,
@@ -586,6 +586,17 @@ def _provider_api_error(exc: OpenCodeError) -> ApiError:
             )
 
 
+def _session_status_projection(status: SessionStatus | None) -> dict[str, Any]:
+    if status is None:
+        return {"state": "unknown"}
+    return {
+        "state": status.state.value,
+        "retry_attempt": status.retry_attempt,
+        "retry_message": status.retry_message,
+        "retry_next_ms": status.retry_next_ms,
+    }
+
+
 async def get_task_session_messages(
     session: AsyncSession,
     identifier: str,
@@ -611,6 +622,13 @@ async def get_task_session_messages(
     except OpenCodeError as exc:
         raise _provider_api_error(exc) from exc
 
+    try:
+        provider_status = await provider.session_status(row.remote_session_id)
+    except OpenCodeError:
+        # Status is a hint, not the transcript.  A transient status failure must
+        # not hide messages that were just read successfully.
+        provider_status = None
+
     projected, truncated = _project_session_messages(messages.messages)
     return {
         "task_id": str(task.task_id),
@@ -621,6 +639,7 @@ async def get_task_session_messages(
         "remote_session_id_masked": True,
         "state": row.state,
         "state_is_terminal": row.state in TERMINAL_SUPERVISOR_STATES,
+        "session_status": _session_status_projection(provider_status),
         "message_count": len(projected),
         "truncated": truncated,
         "limits": {
@@ -700,17 +719,26 @@ async def send_task_session_message(
             details={"task_id": task.display_id, "state": row.state},
         )
 
+    encoded = clean.encode("utf-8")
+    prompt = BoundedPrompt(
+        text=clean,
+        digest="sha256:" + hashlib.sha256(encoded).hexdigest(),
+        max_bytes=len(encoded),
+        original_bytes=len(encoded),
+        truncated=False,
+    )
     try:
-        turn = await provider.send_message(row.remote_session_id, clean)
+        receipt = await provider.send_prompt(row.remote_session_id, prompt)
+        provider_status = await provider.session_status(row.remote_session_id)
     except OpenCodeError as exc:
         raise _provider_api_error(exc) from exc
 
-    reply = sanitize_text(turn.text, max_chars=SESSION_REPLY_MAX_CHARS)
+    accepted_at = datetime.now(UTC)
     await audit.append_event(
         session,
         actor_role=role,
         actor_id=await resolve_actor_id(session, actor),
-        action="SESSION_MESSAGE_SENT",
+        action="SESSION_MESSAGE_ACCEPTED",
         object_type="supervisor_session",
         object_id=row.display_id,
         before=None,
@@ -719,11 +747,12 @@ async def send_task_session_message(
             "supervisor_session_id": str(row.supervisor_session_id),
             "state": row.state,
             "remote_session_id": mask_remote_session_id(row.remote_session_id),
-            "message_id": turn.message_id,
-            "role": "assistant",
-            "text_chars": len(reply.text),
+            "prompt_digest": receipt.prompt_digest,
+            "text_chars": len(clean),
+            "provider_http_status": receipt.http_status,
+            "completion_claimed": False,
         },
-        reason="Follow-up message sent to the bound OpenCode session",
+        reason="Follow-up message accepted by the bound OpenCode session",
         correlation_id=correlation_id,
         path=path,
     )
@@ -736,10 +765,15 @@ async def send_task_session_message(
         "remote_session_id": mask_remote_session_id(row.remote_session_id),
         "remote_session_id_masked": True,
         "state": row.state,
-        "message_id": turn.message_id,
-        "role": "assistant",
-        "text": reply.text,
-        "created_at": _iso_from_ms(turn.created_at_ms),
+        "accepted": True,
+        "prompt_digest": receipt.prompt_digest,
+        "provider_http_status": receipt.http_status,
+        "message_id": None,
+        "role": "user",
+        "text": None,
+        "text_chars": len(clean),
+        "created_at": accepted_at.isoformat().replace("+00:00", "Z"),
+        "session_status": _session_status_projection(provider_status),
         "read_only": False,
     }
 

@@ -28,6 +28,8 @@ from noahsark.integrations.opencode.protocol import (
     MessageRole,
     MessageView,
     SessionMessages,
+    SessionState,
+    SessionStatus,
     TextPart,
 )
 from noahsark.main import app
@@ -70,6 +72,10 @@ class _StaticProvider:
         self.calls += 1
         self.last_session_id = session_id
         return self.messages
+
+    async def session_status(self, session_id: str) -> SessionStatus:
+        del session_id
+        return SessionStatus(state=SessionState.IDLE)
 
 
 class _FailingProvider:
@@ -219,6 +225,7 @@ def test_returns_sanitized_ordered_conversation(api):
     assert data["remote_session_id_masked"] is True
     assert data["state"] == "COMPLETED"
     assert data["state_is_terminal"] is True
+    assert data["session_status"]["state"] == "idle"
     assert data["message_count"] == 2
     assert data["truncated"] is False
     assert data["read_only"] is True

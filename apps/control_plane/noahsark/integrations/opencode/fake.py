@@ -66,6 +66,7 @@ class FakeOpenCodeProvider:
         self._clock_ms = clock_start_ms
         self._model = model
         self._model_calls: list[tuple[str, ModelSelection]] = []
+        self._prompt_calls: list[tuple[str, str, ModelSelection | None]] = []
         self._message_calls: list[tuple[str, str, ModelSelection | None]] = []
         self._delete_calls: list[str] = []
         self._session_counter = 0
@@ -132,6 +133,7 @@ class FakeOpenCodeProvider:
             )
 
         self._record_model("prompt", model)
+        self._prompt_calls.append((session_id, prompt.text, model))
         timestamp = self._tick()
         session.messages.append(
             MessageView(
@@ -271,6 +273,11 @@ class FakeOpenCodeProvider:
         """Every follow-up message the fake received, in call order."""
 
         return tuple(self._message_calls)
+
+    def prompt_calls(self) -> tuple[tuple[str, str, ModelSelection | None], ...]:
+        """Every async prompt the fake received, in call order."""
+
+        return tuple(self._prompt_calls)
 
     def delete_calls(self) -> tuple[str, ...]:
         """Every session id passed to ``delete_session``, in call order."""
