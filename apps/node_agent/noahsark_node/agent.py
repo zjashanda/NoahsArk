@@ -277,6 +277,7 @@ class NodeAgent:
         try:
             response = self.client.register()
         except (ControlPlaneUnavailable, ControlPlaneRejected) as exc:
+            self._reset_registration(exc)
             report.steps.append("register_unavailable")
             report.skipped_reason = str(exc)
             return
@@ -284,6 +285,17 @@ class NodeAgent:
         lease_raw = response.get("lease")
         if isinstance(lease_raw, dict):
             self._apply_lease_mapping(lease_raw)
+
+    def _reset_registration(self, exc: Exception) -> None:
+        """Force a fresh register after an authentication/authorization reject.
+
+        A token can be rotated or revoked while the process keeps running.  A
+        transport outage is different: ``_registered`` stays true because the
+        server did not reject the identity.
+        """
+
+        if isinstance(exc, ControlPlaneRejected) and exc.status in (401, 403):
+            self._registered = False
 
     def _heartbeat(self, report: CycleReport) -> None:
         report.steps.append("heartbeat")
@@ -296,6 +308,7 @@ class NodeAgent:
                 }
             )
         except (ControlPlaneUnavailable, ControlPlaneRejected) as exc:
+            self._reset_registration(exc)
             report.steps.append("heartbeat_unavailable")
             report.skipped_reason = str(exc)
             return
@@ -308,6 +321,7 @@ class NodeAgent:
         try:
             return self.client.poll(self.lease)
         except (ControlPlaneUnavailable, ControlPlaneRejected) as exc:
+            self._reset_registration(exc)
             report.steps.append("poll_unavailable")
             report.skipped_reason = str(exc)
             return []
@@ -423,6 +437,7 @@ class NodeAgent:
             except ControlPlaneUnavailable as exc:
                 raise UploadDeferred(str(exc)) from exc
             except ControlPlaneRejected as exc:
+                self._reset_registration(exc)
                 raise UploadRejected(str(exc)) from exc
 
         result = self.spool.drain(uploader)
@@ -438,6 +453,7 @@ class NodeAgent:
                 self.lease, executed_job_ids=self.spool.executed_job_ids()
             )
         except (ControlPlaneUnavailable, ControlPlaneRejected) as exc:
+            self._reset_registration(exc)
             report.skipped_reason = str(exc)
             return {}
         lease_raw = response.get("lease")
@@ -509,6 +525,7 @@ class NodeAgent:
         try:
             self.client.post_command_result(payload)
         except (ControlPlaneUnavailable, ControlPlaneRejected) as exc:
+            self._reset_registration(exc)
             report.skipped_reason = f"command_result:{exc}"
         if result.status == STATUS_SUCCEEDED:
             report.commands_executed += 1

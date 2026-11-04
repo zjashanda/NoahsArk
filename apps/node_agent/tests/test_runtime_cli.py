@@ -82,3 +82,28 @@ def test_service_constructor_is_safe_without_windows() -> None:
     framework = service.NodeAgentWindowsService([])
 
     assert framework._stop_requested() is False
+
+
+def test_cli_run_survives_a_cycle_exception(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    fake = FakeControlPlane()
+    agent = build_agent(tmp_path, fake)
+    calls: list[int] = []
+    real_cycle = agent.run_cycle
+
+    def flaky_cycle():
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("transient failure")
+        if len(calls) == 2:
+            return real_cycle()
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(agent, "run_cycle", flaky_cycle)
+
+    assert run(agent, interval=0, once=False) == 0
+    assert len(calls) == 3
+    captured = capsys.readouterr()
+    assert "RuntimeError" in captured.out
+    assert fake.poll_calls == 1

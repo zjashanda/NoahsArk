@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
+import traceback
 from collections.abc import Sequence
 
 from . import __version__
@@ -41,7 +42,24 @@ def _build_parser() -> argparse.ArgumentParser:
 def run(agent: NodeAgent, *, interval: float, once: bool) -> int:
     try:
         while True:
-            report = agent.run_cycle()
+            try:
+                report = agent.run_cycle()
+            except Exception as exc:  # noqa: BLE001 - daemon must survive a bad cycle
+                # A single malformed payload or local I/O error must not kill
+                # the long-running agent.  Keep the process alive so the next
+                # cycle can reconnect and recover.
+                print(
+                    json.dumps(
+                        {"error": type(exc).__name__, "message": str(exc)},
+                        sort_keys=True,
+                    ),
+                    flush=True,
+                )
+                traceback.print_exc()
+                if once:
+                    return 1
+                time.sleep(interval)
+                continue
             print(json.dumps(report.to_dict(), sort_keys=True), flush=True)
             if once:
                 return 0
