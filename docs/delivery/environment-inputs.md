@@ -209,7 +209,7 @@
 | CLI 入口 | `python3 scripts/lstest.py <subcommand>` | `known` | 7 个顶层子命令 + `audio` 下 5 个嵌套子命令（见第 1.1 节） |
 | 正式执行命令/参数 | 未提供 | `unknown` | 需 profile 路径、任务配置、设备绑定、超时与证据参数 |
 | 已知限制 | v1 配置缺 `profile_id` 即 BLOCKED；绝对路径/`..` 被拒；legacy `rounds.csv` 只读；`tool.log` 北京时间 | `known` | S10 §8.4 |
-| 能力集 | 9 项：dynamic-serial、profile、evidence、basic-smoke、safe-stop、edge-tts、audio-device-scan、laid-installer、device-key-playback | `known` | `list --json` |
+| 能力集 | 9 项：dynamic-serial、profile、evidence、basic-smoke、safe-stop、indextts-tts、audio-device-scan、laid-installer、device-key-playback | `known` | `list --json`；2026-11-06 实读上游 `lstest` 已把合成能力名改为 `indextts-tts`（通道为 lstts/IndexTTS） |
 
 **责任方问题**
 
